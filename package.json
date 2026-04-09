@@ -1,0 +1,43 @@
+{
+  "name": "@therealironduck/ducktion-ts",
+  "version": "0.0.0-dev",
+  "description": "Simple, flexible dependency injection for Typescript",
+  "homepage": "https://github.com/therealironduck/ducktion-ts",
+  "bugs": {
+    "url": "https://github.com/therealironduck/ducktion-ts/issues"
+  },
+  "license": "MIT",
+  "author": "Jordan Kniest <mail@jkniest.de>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/therealironduck/ducktion-ts.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@typescript/native-preview": "7.0.0-dev.20260409.1",
+    "oxfmt": "^0.44.0",
+    "oxlint": "^1.59.0",
+    "oxlint-tsgolint": "^0.20.0",
+    "tsdown": "^0.21.7",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}
