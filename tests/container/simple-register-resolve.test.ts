@@ -1,9 +1,9 @@
 import { expect } from "vitest";
 
 import { test } from "../base";
-import SimpleService from "../stubs/SimpleService";
+import SimpleService, { ISimpleService } from "../stubs/SimpleService";
 
-test.only("it can register a simple service and resolve it", ({ container }) => {
+test("it can register a simple service and resolve it", ({ container }) => {
   // Note: You can use `container.register<SimpleService>()` for better type safety
   container.__registerAs("SimpleService", SimpleService);
 
@@ -17,4 +17,22 @@ test("it can register a service for an interface and resolve it", ({ container }
 
   const service = container.__resolveByToken("ISimpleInterface");
   expect(service).toBeInstanceOf(SimpleService);
+});
+
+test("it throws an error if the `register<T>` method is used without the plugin", ({
+  container,
+}) => {
+  expect(() => container.register<SimpleService>()).toThrow();
+});
+
+test("it throws an error if the `registerAs<T, T2>` method is used without the plugin", ({
+  container,
+}) => {
+  expect(() => container.registerAs<ISimpleService, SimpleService>()).toThrow();
+});
+
+test("it throws an error if the `resolve<T>` method is used without the plugin", ({
+  container,
+}) => {
+  expect(() => container.resolve<SimpleService>()).toThrow();
 });

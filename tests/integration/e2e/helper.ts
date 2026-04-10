@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { build, type Rollup } from "vite";
 
 import { PACKAGE_NAME } from "../../../src/constants";

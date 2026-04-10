@@ -47,8 +47,9 @@ class DiContainer {
    * types are stripped from the production build.
    */
   public register<_T>() {
-    // TODO: Only allow _T instantiable
-    // TODO: Throw a runtime error (hinting, that the Vite/Rollup plugin is not installed yet)
+    throw new Error(
+      "register<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+    );
   }
 
   /**
@@ -61,8 +62,9 @@ class DiContainer {
    * types are stripped from the production build.
    */
   public registerAs<_Token, _Impl>() {
-    // TODO: Only allow _Impl instantiable
-    // TODO: Throw a runtime error (hinting, that the Vite/Rollup plugin is not installed yet)
+    throw new Error(
+      "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+    );
   }
 
   /**
@@ -88,8 +90,10 @@ class DiContainer {
    * `__resolveByToken` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public resolve<_T>() {
-    // TODO: Throw a runtime error (hinting, that the Vite/Rollup plugin is not installed yet)
+  public resolve<_T>(): _T {
+    throw new Error(
+      "resolve<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+    );
   }
 
   /**
