@@ -19,20 +19,18 @@ test("it can register a service for an interface and resolve it", ({ container }
   expect(service).toBeInstanceOf(SimpleService);
 });
 
-test("it throws an error if the `register<T>` method is used without the plugin", ({
-  container,
-}) => {
+test("it throws an error if the `register<T>` method is used without the plugin", ({ container }) => {
   expect(() => container.register<SimpleService>()).toThrow();
 });
 
-test("it throws an error if the `registerAs<T, T2>` method is used without the plugin", ({
-  container,
-}) => {
+test("it throws an error if the `registerAs<T, T2>` method is used without the plugin", ({ container }) => {
   expect(() => container.registerAs<ISimpleService, SimpleService>()).toThrow();
 });
 
-test("it throws an error if the `resolve<T>` method is used without the plugin", ({
-  container,
-}) => {
+test("it throws an error if the `resolve<T>` method is used without the plugin", ({ container }) => {
   expect(() => container.resolve<SimpleService>()).toThrow();
+});
+
+test("it throws an error if the service is unknown", ({ container }) => {
+  expect(() => container.__resolveByToken("SimpleService")).toThrow("Service is not registered");
 });

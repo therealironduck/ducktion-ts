@@ -108,8 +108,7 @@ class DiContainer {
   public __resolveByToken(token: string) {
     const definition = this.services.get(token);
     if (!definition) {
-      // TODO: Throw error
-      return;
+      throw new Error("Service is not registered");
     }
 
     return new definition.serviceType();
