@@ -6,6 +6,7 @@
  *   container.register<DebugLogger>()             →  container.__registerAs("pkg#DebugLogger", DebugLogger)
  *   container.resolve<DebugLogger>()              →  container.__resolveByToken("pkg#DebugLogger")
  *   container.registerAs<ILogger, DebugLogger>()  →  container.__registerAs("pkg#ILogger", DebugLogger)
+ *   container.override<ILogger, DebugLogger>()    →  container.__override("pkg#ILogger", DebugLogger)
  *
  * Only calls on objects imported from this package are rewritten; same-named
  * methods on unrelated classes are left untouched.
@@ -90,6 +91,16 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   },
   registerAs: {
     replacementName: "__registerAs",
+    requiredTypeArgs: 2,
+    buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
+      const tokenTypeName = typeArgs[0].getText(sourceFile);
+      const implTypeName = typeArgs[1].getText(sourceFile);
+      const token = buildToken(tokenTypeName, importMap, fileId);
+      return `"${token}", ${implTypeName}`;
+    },
+  },
+  override: {
+    replacementName: "__override",
     requiredTypeArgs: 2,
     buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
       const tokenTypeName = typeArgs[0].getText(sourceFile);

@@ -132,6 +132,51 @@ class DiContainer {
   }
 
   /**
+   * Override any registered service with another implementation. Any singleton instance for this type
+   * will be cleared as well.
+   *
+   * The service itself must not be abstract or an enum.
+   *
+   * Note: This method does nothing at runtime, but during build it will be replaced with the
+   * `__override` method, so that it will keep working even when typescript
+   * types are stripped from the production build.
+   */
+  public override<_Token, _Impl extends _Token>(): void {
+    // TODO: Error handling
+    // throw new Error(
+    //   "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+    // );
+  }
+
+  /**
+   * Override any registered service with another implementation. Any singleton instance for this type
+   * will be cleared as well.
+   *
+   * The service itself must not be abstract or an enum.
+   *
+   * Note: It is recommended to use the `override<Token, Impl>` method instead of calling this one directly.
+   */
+  public __override(token: string, implementation: any): void {
+    // if (this.services.has(token)) {
+    //   throw new Error("Service is already registered. Use `override` to override the service");
+    // }
+    //
+    // // If the `implementation` is abstract, throw an error.
+    // // The `__ducktionAbstract` marker will be set by our Vite/Rollup plugin
+    // if (Object.hasOwn(implementation, "__ducktionAbstract")) {
+    //   throw new Error("Service is abstract");
+    // }
+    //
+    // // Verify that `implementation` can actually be instantiated.
+    // if (typeof implementation !== "function" || !implementation.prototype) {
+    //   throw new Error("Service is not instantiable");
+    // }
+
+    const definition = new ServiceDefinition(implementation);
+    this.services.set(token, definition);
+  }
+
+  /**
    * Remove all registered services and singleton instances, basically resetting the container.
    */
   public clear() {

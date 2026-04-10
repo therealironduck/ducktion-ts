@@ -229,6 +229,78 @@ bus.registerAs<IMyService, MyService>();
 // no-op cases (existing)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// override<T, T2>()
+// ---------------------------------------------------------------------------
+
+test("transforms override<IToken, IImpl>() with a relative import to __override with a string token", () => {
+  const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./services/logger";
+import { DebugLogger } from "./services/debug-logger";
+DiContainer.singleton.override<ILogger, DebugLogger>();
+`.trim();
+
+  const result = transform(code, "/project/src/app.ts");
+  expect(result).toContain('__override("/project/src/services/logger#ILogger", DebugLogger)');
+  expect(result).not.toContain("override<ILogger, DebugLogger>");
+});
+
+test("transforms override<IToken, IImpl>() with a package import to __override with a string token", () => {
+  const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "some-logger-lib";
+import { DebugLogger } from "./debug-logger";
+DiContainer.singleton.override<ILogger, DebugLogger>();
+`.trim();
+
+  const result = transform(code, "/project/src/app.ts");
+  expect(result).toContain('__override("some-logger-lib#ILogger", DebugLogger)');
+  expect(result).not.toContain("override<ILogger, DebugLogger>");
+});
+
+test("transforms override<IToken, IImpl>() when container is stored in a variable", () => {
+  const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./logger";
+import { DebugLogger } from "./debug-logger";
+const container = DiContainer.singleton;
+container.override<ILogger, DebugLogger>();
+`.trim();
+
+  const result = transform(code, "/project/src/app.ts");
+  expect(result).toContain('__override("/project/src/logger#ILogger", DebugLogger)');
+  expect(result).not.toContain("override<ILogger, DebugLogger>");
+});
+
+test("does not transform override<T>() with only one type argument", () => {
+  const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.override<IMyService>();
+`.trim();
+
+  const result = transform(code, "test.ts");
+  expect(result).toBe(code);
+});
+
+test("does not transform override<T, T2>() on an unrelated class", () => {
+  const code = `
+import DiContainer from "${PACKAGE_NAME}";
+class EventBus {
+  override<T, T2>(): void {}
+}
+const bus = new EventBus();
+bus.override<IMyService, MyService>();
+`.trim();
+
+  const result = transform(code, "test.ts");
+  expect(result).toBe(code);
+});
+
+// ---------------------------------------------------------------------------
+// no-op cases (existing)
+// ---------------------------------------------------------------------------
+
 test("does not transform register<T>() on an unrelated class in a file that also imports the package", () => {
   const code = `
 import DiContainer from "${PACKAGE_NAME}";

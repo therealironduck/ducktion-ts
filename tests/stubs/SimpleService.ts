@@ -5,4 +5,6 @@ export abstract class BaseSimpleService {
 
 export default class SimpleService extends BaseSimpleService implements ISimpleService {}
 
+export class SecondSimpleService implements ISimpleService {}
+
 export interface ISimpleService {}
