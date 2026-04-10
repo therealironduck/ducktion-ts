@@ -6,6 +6,7 @@
  *   container.register<DebugLogger>()             →  container.__registerAs("pkg#DebugLogger", DebugLogger)
  *   container.resolve<DebugLogger>()              →  container.__resolveByToken("pkg#DebugLogger")
  *   container.registerAs<ILogger, DebugLogger>()  →  container.__registerAs("pkg#ILogger", DebugLogger)
+ *   container.override<ILogger, DebugLogger>()    →  container.__override("pkg#ILogger", DebugLogger)
  *
  * Only calls on objects imported from this package are rewritten; same-named
  * methods on unrelated classes are left untouched.
@@ -49,6 +50,53 @@ type MethodConfig = {
 };
 
 /**
+ * Validates that a type name refers to an instantiable class (not an interface, type alias, or enum).
+ * Returns an error message string if invalid, or null if the type is acceptable.
+ *
+ * @param typeName     The bare type name to check (generic suffix already stripped).
+ * @param method       The method name used in the error message (e.g. "register", "registerAs").
+ * @param isTokenArg   True when the checked arg is the sole type arg of `register<T>()`, which
+ *                     warrants a different error message that suggests `registerAs` as an alternative.
+ */
+function validateInstantiableType(
+  typeName: string,
+  method: string,
+  isTokenArg: boolean,
+  {
+    typeOnlyImports,
+    interfaceNames,
+    enumNames,
+  }: Pick<TransformArgs, "typeOnlyImports" | "interfaceNames" | "enumNames">,
+): string | null {
+  if (typeOnlyImports.has(typeName) || interfaceNames.has(typeName)) {
+    if (isTokenArg) {
+      return (
+        `[ducktion-ts] Cannot use ${method}<${typeName}>() with an interface or type alias. ` +
+        `Interfaces have no runtime value and cannot be instantiated. ` +
+        `To map an interface to a concrete implementation use: registerAs<${typeName}, ConcreteImpl>()`
+      );
+    }
+    return (
+      `[ducktion-ts] Cannot use ${method}<Token, ${typeName}>() with an interface or type alias as the implementation. ` +
+      `Interfaces have no runtime value and cannot be instantiated.`
+    );
+  }
+  if (enumNames.has(typeName)) {
+    if (isTokenArg) {
+      return (
+        `[ducktion-ts] Cannot use ${method}<${typeName}>() with an enum. ` +
+        `Enums are not instantiable classes and cannot be registered as services.`
+      );
+    }
+    return (
+      `[ducktion-ts] Cannot use ${method}<Token, ${typeName}>() with an enum as the implementation. ` +
+      `Enums are not instantiable classes and cannot be registered as services.`
+    );
+  }
+  return null;
+}
+
+/**
  * Maps generic-call method names to their runtime replacements.
  * Add entries here to support additional transformations in the future.
  */
@@ -58,20 +106,7 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
     requiredTypeArgs: 1,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
-      if (typeOnlyImports.has(typeName) || interfaceNames.has(typeName)) {
-        return (
-          `[ducktion-ts] Cannot use register<${typeName}>() with an interface or type alias. ` +
-          `Interfaces have no runtime value and cannot be instantiated. ` +
-          `To map an interface to a concrete implementation use: registerAs<${typeName}, ConcreteImpl>()`
-        );
-      }
-      if (enumNames.has(typeName)) {
-        return (
-          `[ducktion-ts] Cannot use register<${typeName}>() with an enum. ` +
-          `Enums are not instantiable classes and cannot be registered as services.`
-        );
-      }
-      return null;
+      return validateInstantiableType(typeName, "register", true, { typeOnlyImports, interfaceNames, enumNames });
     },
     buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
       const typeName = typeArgs[0].getText(sourceFile);
@@ -91,6 +126,28 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   registerAs: {
     replacementName: "__registerAs",
     requiredTypeArgs: 2,
+    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
+      const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
+      return validateInstantiableType(implTypeName, "registerAs", false, {
+        typeOnlyImports,
+        interfaceNames,
+        enumNames,
+      });
+    },
+    buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
+      const tokenTypeName = typeArgs[0].getText(sourceFile);
+      const implTypeName = typeArgs[1].getText(sourceFile);
+      const token = buildToken(tokenTypeName, importMap, fileId);
+      return `"${token}", ${implTypeName}`;
+    },
+  },
+  override: {
+    replacementName: "__override",
+    requiredTypeArgs: 2,
+    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
+      const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
+      return validateInstantiableType(implTypeName, "override", false, { typeOnlyImports, interfaceNames, enumNames });
+    },
     buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
       const tokenTypeName = typeArgs[0].getText(sourceFile);
       const implTypeName = typeArgs[1].getText(sourceFile);
