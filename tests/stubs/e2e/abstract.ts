@@ -18,3 +18,8 @@ export function registerAndResolveConcrete() {
   DiContainer.singleton.register<ConcreteService>();
   return DiContainer.singleton.resolve<ConcreteService>();
 }
+
+export function registerAsAndResolveAbstract() {
+  DiContainer.singleton.registerAs<AbstractService, ConcreteService>();
+  return DiContainer.singleton.resolve<AbstractService>();
+}
