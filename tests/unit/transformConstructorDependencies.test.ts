@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { transformConstructorDependencies } from "../../src/plugin/transformConstructorDependencies";
+import { SCALAR_TOKEN, transformConstructorDependencies } from "../../src/plugin/transformConstructorDependencies";
 
 const FILE_ID = "/project/src/service.ts";
 
@@ -13,6 +13,7 @@ class FooService {
 
   const result = transformConstructorDependencies(code, FILE_ID);
   expect(result).toContain("static __ducktionDependencies =");
+  expect(result).toContain(`name: "logger"`);
   expect(result).toContain("/project/src/logger#ILogger");
 });
 
@@ -30,6 +31,19 @@ class FooService {
   expect(loggerPos).toBeGreaterThan(-1);
   expect(dbPos).toBeGreaterThan(-1);
   expect(loggerPos).toBeLessThan(dbPos);
+});
+
+test("includes the original parameter name in each entry", () => {
+  const code = `
+import type { ILogger } from "./logger";
+import type { IDb } from "./db";
+class FooService {
+  constructor(private logger: ILogger, private database: IDb) {}
+}`.trim();
+
+  const result = transformConstructorDependencies(code, FILE_ID);
+  expect(result).toContain(`name: "logger"`);
+  expect(result).toContain(`name: "database"`);
 });
 
 test("does not modify a class with no constructor", () => {
@@ -54,7 +68,7 @@ test("does not double-inject if __ducktionDependencies is already present", () =
   const code = `
 import type { ILogger } from "./logger";
 class FooService {
-  static __ducktionDependencies = ["/project/src/logger#ILogger"];
+  static __ducktionDependencies = [{ name: "logger", token: "/project/src/logger#ILogger" }];
   constructor(private logger: ILogger) {}
 }`.trim();
 
@@ -72,6 +86,33 @@ class FooService {
 
   const result = transformConstructorDependencies(code, FILE_ID);
   expect(result).toContain(`${FILE_ID}#Logger`);
+});
+
+test.each([
+  ["string", "string"],
+  ["number", "number"],
+  ["boolean", "boolean"],
+  ["bigint", "bigint"],
+  ["symbol", "symbol"],
+  ["null", "null"],
+  ["undefined", "undefined"],
+])("uses SCALAR_TOKEN for primitive type %s", (_label, primitiveType) => {
+  const code = `class FooService { constructor(private value: ${primitiveType}) {} }`;
+  const result = transformConstructorDependencies(code, FILE_ID);
+  expect(result).toContain(`token: "${SCALAR_TOKEN}"`);
+  expect(result).not.toContain(`#${primitiveType}`);
+});
+
+test("mixes scalar and non-scalar tokens in the same constructor", () => {
+  const code = `
+import type { ILogger } from "./logger";
+class FooService {
+  constructor(private name: string, private logger: ILogger) {}
+}`.trim();
+
+  const result = transformConstructorDependencies(code, FILE_ID);
+  expect(result).toContain(`token: "${SCALAR_TOKEN}"`);
+  expect(result).toContain("/project/src/logger#ILogger");
 });
 
 test("handles multiple classes in the same file independently", () => {

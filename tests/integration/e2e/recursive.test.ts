@@ -9,3 +9,11 @@ test("resolve<T>() recursively resolves constructor dependencies", async () => {
   expect(mod.result?.constructor?.name).toBe("AppService");
   expect((mod.result as { logger: unknown }).logger?.constructor?.name).toBe("LoggerService");
 });
+
+test("resolve<T>() recursively resolves constructor dependencies with multiple constructors", async () => {
+  const mod = await buildAndRun("./tests/stubs/e2e/recursive-multiple-constructors.ts");
+
+  expect(mod.result).toBeDefined();
+  expect(mod.result?.constructor?.name).toBe("AppService");
+  expect((mod.result as { logger: unknown }).logger?.constructor?.name).toBe("LoggerService");
+});

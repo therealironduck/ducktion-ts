@@ -11,7 +11,7 @@ export interface ISimpleService {}
 
 export class ServiceWithDependencies {
   // This will be set by the Ducktion vite/rolldown plugin
-  static __ducktionDependencies = ["ISimpleService"];
+  static __ducktionDependencies = [{ name: "service", token: "ISimpleService" }];
 
   public readonly service: ISimpleService;
 

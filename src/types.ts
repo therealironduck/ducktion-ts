@@ -4,5 +4,5 @@ export interface Options {
 
 export type Instantiable = {
   new (...args: any[]): any;
-  __ducktionDependencies: string[];
+  __ducktionDependencies: Array<{ name: string; token: string }>;
 };

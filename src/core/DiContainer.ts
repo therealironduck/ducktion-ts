@@ -1,3 +1,4 @@
+import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
 import ServiceDefinition from "./ServiceDefinition";
 
 /**
@@ -123,13 +124,25 @@ class DiContainer {
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
   public __resolveByToken(token: string): any {
+    // If we try to resolve scalar values (number, string, etc.) we just fail instantly
+    if (token === SCALAR_TOKEN) {
+      throw new Error(`Parameter is a scalar value and cannot be resolved`);
+    }
+
     const definition = this.services.get(token);
     if (!definition) {
       throw new Error(`Service is not registered`);
     }
 
+    // Resolve all dependencies recursively
     const dependencies = definition.serviceType.__ducktionDependencies ?? [];
-    const resolvedDependencies = dependencies.map((dep: string): any => this.__resolveByToken(dep));
+    const resolvedDependencies = dependencies.map((dep: { name: string; token: string }): any => {
+      try {
+        return this.__resolveByToken(dep.token);
+      } catch (error) {
+        throw new Error(`Parameter '${dep.name}' could not be resolved`, { cause: error });
+      }
+    });
 
     return new definition.serviceType(...resolvedDependencies);
   }
