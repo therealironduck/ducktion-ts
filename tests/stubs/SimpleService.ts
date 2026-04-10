@@ -1,3 +1,8 @@
-export default class SimpleService {}
+export abstract class BaseSimpleService {
+  // This will be set by the Ducktion vite/rollup plugin
+  static __ducktionAbstract = true;
+}
+
+export default class SimpleService extends BaseSimpleService {}
 
 export interface ISimpleService {}

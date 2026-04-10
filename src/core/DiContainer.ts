@@ -75,7 +75,12 @@ class DiContainer {
    * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
    */
   public __registerAs(token: string, implementation: any) {
-    // TODO: Implementation instantaible
+    // If the `implementation` is abstract, throw an error.
+    // The `__ducktionAbstract` marker will be set by our Vite/Rollup plugin
+    if (Object.hasOwn(implementation, "__ducktionAbstract")) {
+      throw new Error("Service is abstract");
+    }
+
     this.services.set(token, new ServiceDefinition(implementation));
   }
 
