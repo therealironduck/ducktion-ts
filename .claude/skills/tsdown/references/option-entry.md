@@ -107,12 +107,7 @@ Multiple positive and negation patterns:
 ```ts
 export default defineConfig({
   entry: {
-    "utils/*": [
-      "src/utils/*.ts",
-      "src/utils/*.tsx",
-      "!src/utils/index.ts",
-      "!src/utils/internal.ts",
-    ],
+    "utils/*": ["src/utils/*.ts", "src/utils/*.tsx", "!src/utils/index.ts", "!src/utils/internal.ts"],
   },
 });
 ```
