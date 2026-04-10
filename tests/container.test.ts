@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import { DiContainer } from "../src";
+import SimpleService from "./stubs/SimpleService";
 
 test("it can instantiate a new container at runtime", () => {
   const singleton = DiContainer.singleton;
@@ -9,23 +10,12 @@ test("it can instantiate a new container at runtime", () => {
   expect(singleton).toBeInstanceOf(DiContainer);
 });
 
-/**
-	*        [Test]
-        public void ItReturnsTheSameContainerEverytime()
-        {
-            var container1 = Ducktion.singleton;
-            container1.Reinitialize();
-            container1.Register<SimpleService>();
-
-            var container2 = Ducktion.singleton;
-            var service = container2.Resolve<SimpleService>();
-
-            Assert.IsNotNull(service);
-        }
-		*/
-
 test("it returns the same container everytime", () => {
-  expect(true).toBeTruthy();
-  // let container1 = DiContainer.singleton;
-  // TODO: continue after `register` is implemented
+  let container1 = DiContainer.singleton;
+  container1.__registerAs("SimpleService", SimpleService);
+
+  let container2 = DiContainer.singleton;
+  const service = container2.__resolveByToken("SimpleService");
+
+  expect(service).not.toBeNullable();
 });
