@@ -14,19 +14,35 @@
 import ts from "typescript";
 
 import { buildToken } from "./buildToken";
-import { collectDiBindings, collectImportedNames, collectTypeImportMap, getRootIdentifier } from "./collectImports";
+import {
+  collectDiBindings,
+  collectImportedNames,
+  collectInterfaceNames,
+  collectTypeImportMap,
+  collectTypeOnlyImports,
+  getRootIdentifier,
+} from "./collectImports";
 
 type TransformArgs = {
   typeArgs: ts.NodeArray<ts.TypeNode>;
   sourceFile: ts.SourceFile;
   importMap: Map<string, string>;
   fileId: string;
+  typeOnlyImports: Set<string>;
+  interfaceNames: Set<string>;
 };
 
 type MethodConfig = {
   replacementName: string;
   /** Minimum number of type arguments required; calls with fewer are skipped. */
   requiredTypeArgs: number;
+  /**
+   * When provided, called before buildArgs. Return a non-null error message to
+   * replace the entire call expression with a runtime throw instead of the
+   * normal rewrite — keeping the build green while surfacing a clear error at
+   * the point of use.
+   */
+  buildRuntimeError?: (args: TransformArgs) => string | null;
   buildArgs: (args: TransformArgs) => string;
 };
 
@@ -38,6 +54,17 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   register: {
     replacementName: "__registerAs",
     requiredTypeArgs: 1,
+    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames }) => {
+      const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
+      if (typeOnlyImports.has(typeName) || interfaceNames.has(typeName)) {
+        return (
+          `[ducktion-ts] Cannot use register<${typeName}>() with an interface or type alias. ` +
+          `Interfaces have no runtime value and cannot be instantiated. ` +
+          `To map an interface to a concrete implementation use: registerAs<${typeName}, ConcreteImpl>()`
+        );
+      }
+      return null;
+    },
     buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
       const typeName = typeArgs[0].getText(sourceFile);
       const token = buildToken(typeName, importMap, fileId);
@@ -75,6 +102,8 @@ export const transformGenericCalls = (code: string, id: string): string => {
 
   const diBindings = collectDiBindings(sourceFile, importedNames);
   const importMap = collectTypeImportMap(sourceFile);
+  const typeOnlyImports = collectTypeOnlyImports(sourceFile);
+  const interfaceNames = collectInterfaceNames(sourceFile);
 
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 
@@ -91,17 +120,29 @@ export const transformGenericCalls = (code: string, id: string): string => {
       if (config !== undefined && node.typeArguments.length >= config.requiredTypeArgs) {
         const root = getRootIdentifier(node.expression.expression);
         if (root && diBindings.has(root)) {
-          const args = config.buildArgs({
+          const transformArgs: TransformArgs = {
             typeArgs: node.typeArguments,
             sourceFile,
             importMap,
             fileId: id,
-          });
-          replacements.push({
-            start: node.expression.name.getStart(sourceFile),
-            end: node.end,
-            text: `${config.replacementName}(${args})`,
-          });
+            typeOnlyImports,
+            interfaceNames,
+          };
+
+          const runtimeError = config.buildRuntimeError?.(transformArgs) ?? null;
+          if (runtimeError) {
+            replacements.push({
+              start: node.getStart(sourceFile),
+              end: node.end,
+              text: `(() => { throw new Error(${JSON.stringify(runtimeError)}); })()`,
+            });
+          } else {
+            replacements.push({
+              start: node.expression.name.getStart(sourceFile),
+              end: node.end,
+              text: `${config.replacementName}(${config.buildArgs(transformArgs)})`,
+            });
+          }
         }
       }
     }

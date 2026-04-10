@@ -24,10 +24,10 @@ async function bundle(entry: string): Promise<string> {
 test('it converts `register<T>()` calls into `__registerAs("token", T)` at build time', async () => {
   const code = await bundle("./tests/stubs/raw.ts");
 
-  expect(code).toMatch(/__registerAs\("[^"]+#IMyInterface",\s*IMyInterface\)/);
-  expect(code).toMatch(/__registerAs\("[^"]+#IOtherService",\s*IOtherService\)/);
-  expect(code).not.toContain("register<IMyInterface>");
-  expect(code).not.toContain("register<IOtherService>");
+  expect(code).toMatch(/__registerAs\("[^"]+#MyInterface",\s*MyInterface\)/);
+  expect(code).toMatch(/__registerAs\("[^"]+#OtherService",\s*OtherService\)/);
+  expect(code).not.toContain("register<MyInterface>");
+  expect(code).not.toContain("register<OtherService>");
 });
 
 test("it does not replace `register<T>()` calls on unrelated classes", async () => {
@@ -39,6 +39,6 @@ test("it does not replace `register<T>()` calls on unrelated classes", async () 
 test("it only replaces `register<T>()` on DiContainer, not on unrelated classes in the same file", async () => {
   const code = await bundle("./tests/stubs/mixed.ts");
 
-  expect(code).toMatch(/__registerAs\("[^"]+#IMyService",\s*IMyService\)/);
+  expect(code).toMatch(/__registerAs\("[^"]+#MyService",\s*MyService\)/);
   expect(code).not.toMatch(/__registerAs\("[^"]+#IOtherService"/);
 });

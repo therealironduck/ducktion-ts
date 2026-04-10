@@ -1,14 +1,14 @@
 import DiContainer from "@therealironduck/ducktion-ts";
 
-interface IMyInterface {
-  doSomething(): void;
+class MyInterface {
+  doSomething(): void {}
 }
 
-interface IOtherService {
-  run(): void;
+class OtherService {
+  run(): void {}
 }
 
-DiContainer.singleton.register<IMyInterface>();
+DiContainer.singleton.register<MyInterface>();
 
 const container = DiContainer.singleton;
-container.register<IOtherService>();
+container.register<OtherService>();

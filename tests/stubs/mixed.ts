@@ -1,7 +1,7 @@
 import DiContainer from "@therealironduck/ducktion-ts";
 
-interface IMyService {
-  run(): void;
+class MyService {
+  run(): void {}
 }
 
 interface IOtherService {
@@ -12,7 +12,7 @@ class EventBus {
   register<T>(): void {}
 }
 
-DiContainer.singleton.register<IMyService>();
+DiContainer.singleton.register<MyService>();
 
 const bus = new EventBus();
 bus.register<IOtherService>();

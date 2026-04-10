@@ -84,6 +84,54 @@ export function collectDiBindings(sourceFile: ts.SourceFile, seed: Set<string>):
 }
 
 /**
+ * Collects names that were imported as type-only (`import type { Foo }` or
+ * `import { type Foo }`). With verbatimModuleSyntax enabled, interfaces and
+ * type aliases *must* use one of these forms, making this a reliable signal
+ * that the name has no runtime value.
+ */
+export function collectTypeOnlyImports(sourceFile: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement)) continue;
+
+    const clause = statement.importClause;
+    if (!clause) continue;
+
+    if (clause.isTypeOnly) {
+      // import type { Foo, Bar } from "..."
+      if (clause.name) names.add(clause.name.text);
+      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+        for (const el of clause.namedBindings.elements) names.add(el.name.text);
+      }
+    } else if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+      // import { type Foo } from "..."
+      for (const el of clause.namedBindings.elements) {
+        if (el.isTypeOnly) names.add(el.name.text);
+      }
+    }
+  }
+
+  return names;
+}
+
+/**
+ * Collects the names of all interface declarations in the source file.
+ * Used to catch same-file interfaces passed to register<T>().
+ */
+export function collectInterfaceNames(sourceFile: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+
+  function visit(node: ts.Node) {
+    if (ts.isInterfaceDeclaration(node)) names.add(node.name.text);
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return names;
+}
+
+/**
  * Builds a map from every locally-bound import name to its module specifier.
  * Unlike `collectImportedNames`, this covers ALL imports (not just those from
  * this package), so we can look up where any type argument comes from.

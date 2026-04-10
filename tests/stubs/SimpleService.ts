@@ -3,6 +3,6 @@ export abstract class BaseSimpleService {
   static __ducktionAbstract = true;
 }
 
-export default class SimpleService extends BaseSimpleService {}
+export default class SimpleService extends BaseSimpleService implements ISimpleService {}
 
 export interface ISimpleService {}

@@ -31,10 +31,10 @@ test('it converts `register<T>()` calls into `__registerAs("token", T)` at build
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
-  expect(code).toMatch(/__registerAs\("[^"]+#IMyInterface",\s*IMyInterface\)/);
-  expect(code).toMatch(/__registerAs\("[^"]+#IOtherService",\s*IOtherService\)/);
-  expect(code).not.toContain("register<IMyInterface>");
-  expect(code).not.toContain("register<IOtherService>");
+  expect(code).toMatch(/__registerAs\("[^"]+#MyInterface",\s*MyInterface\)/);
+  expect(code).toMatch(/__registerAs\("[^"]+#OtherService",\s*OtherService\)/);
+  expect(code).not.toContain("register<MyInterface>");
+  expect(code).not.toContain("register<OtherService>");
 });
 
 test("it does not replace `register<T>()` calls on unrelated classes", async () => {
@@ -84,6 +84,6 @@ test("it only replaces `register<T>()` on DiContainer, not on unrelated classes 
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
-  expect(code).toMatch(/__registerAs\("[^"]+#IMyService",\s*IMyService\)/);
+  expect(code).toMatch(/__registerAs\("[^"]+#MyService",\s*MyService\)/);
   expect(code).not.toMatch(/__registerAs\("[^"]+#IOtherService"/);
 });
