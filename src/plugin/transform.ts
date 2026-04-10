@@ -1,4 +1,5 @@
 import { transformAbstractClasses } from "./transformAbstractClasses";
+import { transformConstructorDependencies } from "./transformConstructorDependencies";
 import { transformGenericCalls } from "./transformGenericCalls";
 
 /**
@@ -7,9 +8,12 @@ import { transformGenericCalls } from "./transformGenericCalls";
  *     to their runtime equivalents before type erasure.
  *  2. Injects `static __ducktionAbstract = true;` into abstract class declarations so
  *     the abstract marker survives compilation.
+ *  3. Injects `static __ducktionDependencies = [...]` into non-abstract classes so
+ *     constructor parameter types survive compilation as token strings.
  */
 export const transform = (code: string, id: string): string => {
   let result = transformGenericCalls(code, id);
   result = transformAbstractClasses(result, id);
+  result = transformConstructorDependencies(result, id);
   return result;
 };
