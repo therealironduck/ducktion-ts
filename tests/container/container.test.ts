@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { DiContainer } from "../src";
-import SimpleService from "./stubs/SimpleService";
+import { DiContainer } from "../../src";
+import SimpleService from "../stubs/SimpleService";
 
 test("it can instantiate a new container at runtime", () => {
   const singleton = DiContainer.singleton;

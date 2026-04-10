@@ -46,7 +46,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public register<_T>() {
+  public register<_T>(): ServiceDefinition {
     throw new Error(
       "register<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -61,7 +61,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public registerAs<_Token, _Impl extends _Token>() {
+  public registerAs<_Token, _Impl extends _Token>(): ServiceDefinition {
     throw new Error(
       "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -74,7 +74,7 @@ class DiContainer {
    *
    * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
    */
-  public __registerAs(token: string, implementation: any) {
+  public __registerAs(token: string, implementation: any): ServiceDefinition {
     if (this.services.has(token)) {
       throw new Error("Service is already registered. Use `override` to override the service");
     }
@@ -90,7 +90,10 @@ class DiContainer {
       throw new Error("Service is not instantiable");
     }
 
-    this.services.set(token, new ServiceDefinition(implementation));
+    const definition = new ServiceDefinition(implementation);
+    this.services.set(token, definition);
+
+    return definition;
   }
 
   /**
@@ -126,6 +129,13 @@ class DiContainer {
     }
 
     return new definition.serviceType();
+  }
+
+  /**
+   * Remove all registered services and singleton instances, basically resetting the container.
+   */
+  public clear() {
+    this.services.clear();
   }
 }
 
