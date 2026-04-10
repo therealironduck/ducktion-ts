@@ -122,13 +122,16 @@ class DiContainer {
    *
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
-  public __resolveByToken(token: string) {
+  public __resolveByToken(token: string): any {
     const definition = this.services.get(token);
     if (!definition) {
-      throw new Error("Service is not registered");
+      throw new Error(`Service is not registered`);
     }
 
-    return new definition.serviceType();
+    const dependencies = definition.serviceType.__ducktionDependencies ?? [];
+    const resolvedDependencies = dependencies.map((dep: string): any => this.__resolveByToken(dep));
+
+    return new definition.serviceType(...resolvedDependencies);
   }
 
   /**
