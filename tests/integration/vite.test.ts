@@ -9,7 +9,7 @@ const alias = {
   [PACKAGE_NAME]: path.resolve("./src/index.ts"),
 };
 
-test('it converts `register<T>()` calls into `__registerImplementation("T")` at build time', async () => {
+test('it converts `register<T>()` calls into `__registerAs("token", T)` at build time', async () => {
   const result = await build({
     plugins: [plugin()],
     resolve: { alias },
@@ -31,10 +31,10 @@ test('it converts `register<T>()` calls into `__registerImplementation("T")` at 
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
-  expect(code).toContain("__registerImplementation(IMyInterface)");
-  expect(code).toContain("__registerImplementation(IOtherService)");
-  expect(code).not.toContain("__registerImplementation<IMyInterface>");
-  expect(code).not.toContain("__registerImplementation<IOtherService>");
+  expect(code).toMatch(/__registerAs\("[^"]+#IMyInterface",\s*IMyInterface\)/);
+  expect(code).toMatch(/__registerAs\("[^"]+#IOtherService",\s*IOtherService\)/);
+  expect(code).not.toContain("register<IMyInterface>");
+  expect(code).not.toContain("register<IOtherService>");
 });
 
 test("it does not replace `register<T>()` calls on unrelated classes", async () => {
@@ -84,6 +84,6 @@ test("it only replaces `register<T>()` on DiContainer, not on unrelated classes 
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
-  expect(code).toContain("__registerImplementation(IMyService)");
-  expect(code).not.toContain("__registerImplementation(IOtherService)");
+  expect(code).toMatch(/__registerAs\("[^"]+#IMyService",\s*IMyService\)/);
+  expect(code).not.toMatch(/__registerAs\("[^"]+#IOtherService"/);
 });

@@ -4,28 +4,17 @@ import { test } from "../base";
 import SimpleService from "../stubs/SimpleService";
 
 test.only("it can register a simple service and resolve it", ({ container }) => {
-  // Note: You can use `container.Register<SimpleService>()` for better type saftey
-  container.__registerImplementation(SimpleService);
+  // Note: You can use `container.register<SimpleService>()` for better type safety
+  container.__registerAs("SimpleService", SimpleService);
 
-  let service = container.__resolveByToken(SimpleService);
+  const service = container.__resolveByToken("SimpleService");
   expect(service).toBeInstanceOf(SimpleService);
 });
 
-// test("it can register a service for an interface and resolve it", ({ container }) => {
-//   container.register(ISimpleInterface, SimpleService);
-//
-//   const service = container.resolve(ISimpleInterface);
-//   expect(service).toBeInstanceOf(SimpleService);
-// });
+test("it can register a service for an interface and resolve it", ({ container }) => {
+  // Note: You can use `container.RegisterAs<ISimpleInterface, SimpleService>()` for better type saftey
+  container.__registerAs("ISimpleInterface", SimpleService);
 
-/**
-
-        [Test]
-        public void ItCanRegisterAServiceForAnInterfaceAndResolveIt()
-        {
-            container.Register<ISimpleInterface, SimpleService>();
-
-            var service = container.Resolve<ISimpleInterface>();
-            Assert.IsInstanceOf<SimpleService>(service);
-        }
-		*/
+  const service = container.__resolveByToken("ISimpleInterface");
+  expect(service).toBeInstanceOf(SimpleService);
+});

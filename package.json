@@ -29,8 +29,7 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
-    "play": "bun run playground/run.ts"
+    "lint:fix": "oxlint --fix"
   },
   "dependencies": {
     "unplugin": "^3.0.0"

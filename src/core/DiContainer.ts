@@ -31,7 +31,7 @@ class DiContainer {
    * lot of cases both key and value can be the same type. It also contains the singleton instances
    * and other relevant data to resolve the service.
    *
-   * Key format: {fqcn}___{id}
+   * Key format: package#TypeName#id
    * If ID is null, it will be printed as an empty string
    *
    * By default we register our own logger, so that we can log all events happening.
@@ -39,11 +39,11 @@ class DiContainer {
   private services: Map<string, ServiceDefinition> = new Map();
 
   /**
-   * Register a new service. The service type is used as the key and the concrete implementation.
+   * Register a new service. The service type is used as both the token and the concrete implementation.
    * The service must not be abstract, an interface or an enum.
    *
    * Note: This method does nothing at runtime, but during build it will be replaced with the
-   * `__registerImplementation()` method, so that it will keep working even when typescript
+   * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
   public register<_T>() {
@@ -52,14 +52,29 @@ class DiContainer {
   }
 
   /**
-   * Register a new service. The service type is used as the key and the concrete implementation.
-   * The service must not be abstract, an interface or an enum.
+   * Register a concrete implementation against an interface or abstract type token.
+   * Use this when the key type differs from the implementation type:
+   *   container.registerAs<ILogger, DebugLogger>()
    *
-   * Note: It is recommended to use the `register<T>` method instead of calling this one directly.
+   * Note: This method does nothing at runtime, but during build it will be replaced with the
+   * `__registerAs()` method, so that it will keep working even when typescript
+   * types are stripped from the production build.
    */
-  public __registerImplementation(service: any) {
-    // TODO: Only allow service instantiable
-    this.services.set(service, new ServiceDefinition(service));
+  public registerAs<_Token, _Impl>() {
+    // TODO: Only allow _Impl instantiable
+    // TODO: Throw a runtime error (hinting, that the Vite/Rollup plugin is not installed yet)
+  }
+
+  /**
+   * Register a concrete implementation against an interface or abstract type token.
+   * Use this when the key type differs from the implementation type:
+   *   container.registerAs<ILogger, DebugLogger>()
+   *
+   * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
+   */
+  public __registerAs(token: string, implementation: any) {
+    // TODO: Implementation instantaible
+    this.services.set(token, new ServiceDefinition(implementation));
   }
 
   /**
@@ -86,8 +101,8 @@ class DiContainer {
    *
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
-  public __resolveByToken(service: any) {
-    const definition = this.services.get(service);
+  public __resolveByToken(token: string) {
+    const definition = this.services.get(token);
     if (!definition) {
       // TODO: Throw error
       return;
