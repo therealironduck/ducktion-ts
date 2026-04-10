@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "vitest"],
+  "ignorePatterns": ["tests/stubs/**"],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise"],
   "categories": {
     "correctness": "error"
   },
@@ -13,4 +14,3 @@
     "typeCheck": true
   }
 }
-

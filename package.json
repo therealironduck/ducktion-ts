@@ -24,11 +24,16 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "test": "vitest",
+    "test:once": "vitest run",
     "typecheck": "tsc --noEmit",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "play": "bun run playground/run.ts"
+  },
+  "dependencies": {
+    "unplugin": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
@@ -39,5 +44,8 @@
     "tsdown": "^0.21.7",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
   }
 }
