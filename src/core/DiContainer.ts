@@ -81,6 +81,11 @@ class DiContainer {
       throw new Error("Service is abstract");
     }
 
+    // Verify that `implementation` can actually be instantiated.
+    if (typeof implementation !== "function" || !implementation.prototype) {
+      throw new Error("Service is not instantiable");
+    }
+
     this.services.set(token, new ServiceDefinition(implementation));
   }
 

@@ -132,6 +132,22 @@ export function collectInterfaceNames(sourceFile: ts.SourceFile): Set<string> {
 }
 
 /**
+ * Collects the names of all enum declarations in the source file.
+ * Used to catch same-file enums passed to register<T>().
+ */
+export function collectEnumNames(sourceFile: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+
+  function visit(node: ts.Node) {
+    if (ts.isEnumDeclaration(node)) names.add(node.name.text);
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return names;
+}
+
+/**
  * Builds a map from every locally-bound import name to its module specifier.
  * Unlike `collectImportedNames`, this covers ALL imports (not just those from
  * this package), so we can look up where any type argument comes from.

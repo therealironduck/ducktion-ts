@@ -39,4 +39,8 @@ describe("error handling", () => {
   test("it throws an error if the registered service is abstract", ({ container }) => {
     expect(() => container.__registerAs("SimpleService", BaseSimpleService)).toThrow("Service is abstract");
   });
+
+  test("it throws an error if the registered service is not a class at all", ({ container }) => {
+    expect(() => container.__registerAs("SimpleService", 10)).toThrow("Service is not instantiable");
+  });
 });

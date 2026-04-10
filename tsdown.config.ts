@@ -4,5 +4,5 @@ export default defineConfig({
   dts: {
     tsgo: true,
   },
-  entry: ["src/**.ts"],
+  entry: ["src/index.ts", "src/vite.ts", "src/rolldown.ts"],
 });

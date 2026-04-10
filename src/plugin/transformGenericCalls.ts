@@ -16,6 +16,7 @@ import ts from "typescript";
 import { buildToken } from "./buildToken";
 import {
   collectDiBindings,
+  collectEnumNames,
   collectImportedNames,
   collectInterfaceNames,
   collectTypeImportMap,
@@ -30,6 +31,7 @@ type TransformArgs = {
   fileId: string;
   typeOnlyImports: Set<string>;
   interfaceNames: Set<string>;
+  enumNames: Set<string>;
 };
 
 type MethodConfig = {
@@ -54,13 +56,19 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   register: {
     replacementName: "__registerAs",
     requiredTypeArgs: 1,
-    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames }) => {
+    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
       if (typeOnlyImports.has(typeName) || interfaceNames.has(typeName)) {
         return (
           `[ducktion-ts] Cannot use register<${typeName}>() with an interface or type alias. ` +
           `Interfaces have no runtime value and cannot be instantiated. ` +
           `To map an interface to a concrete implementation use: registerAs<${typeName}, ConcreteImpl>()`
+        );
+      }
+      if (enumNames.has(typeName)) {
+        return (
+          `[ducktion-ts] Cannot use register<${typeName}>() with an enum. ` +
+          `Enums are not instantiable classes and cannot be registered as services.`
         );
       }
       return null;
@@ -104,6 +112,7 @@ export const transformGenericCalls = (code: string, id: string): string => {
   const importMap = collectTypeImportMap(sourceFile);
   const typeOnlyImports = collectTypeOnlyImports(sourceFile);
   const interfaceNames = collectInterfaceNames(sourceFile);
+  const enumNames = collectEnumNames(sourceFile);
 
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 
@@ -127,6 +136,7 @@ export const transformGenericCalls = (code: string, id: string): string => {
             fileId: id,
             typeOnlyImports,
             interfaceNames,
+            enumNames,
           };
 
           const runtimeError = config.buildRuntimeError?.(transformArgs) ?? null;
