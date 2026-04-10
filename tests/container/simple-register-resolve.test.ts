@@ -43,4 +43,18 @@ describe("error handling", () => {
   test("it throws an error if the registered service is not a class at all", ({ container }) => {
     expect(() => container.__registerAs("SimpleService", 10)).toThrow("Service is not instantiable");
   });
+
+  test("it throws an error if the service is already registered", ({ container }) => {
+    container.__registerAs("SimpleService", SimpleService);
+
+    expect(() => container.__registerAs("SimpleService", SimpleService)).toThrow(
+      "Service is already registered. Use `override` to override the service",
+    );
+
+    container.__registerAs("ISimpleService", SimpleService);
+
+    expect(() => container.__registerAs("ISimpleService", SimpleService)).toThrow(
+      "Service is already registered. Use `override` to override the service",
+    );
+  });
 });

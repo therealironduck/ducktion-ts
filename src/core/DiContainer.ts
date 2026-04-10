@@ -61,7 +61,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public registerAs<_Token, _Impl>() {
+  public registerAs<_Token, _Impl extends _Token>() {
     throw new Error(
       "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -75,6 +75,10 @@ class DiContainer {
    * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
    */
   public __registerAs(token: string, implementation: any) {
+    if (this.services.has(token)) {
+      throw new Error("Service is already registered. Use `override` to override the service");
+    }
+
     // If the `implementation` is abstract, throw an error.
     // The `__ducktionAbstract` marker will be set by our Vite/Rollup plugin
     if (Object.hasOwn(implementation, "__ducktionAbstract")) {
