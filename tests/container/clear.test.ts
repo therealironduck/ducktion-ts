@@ -25,13 +25,3 @@ test("it clears all singleton instances", ({ container }) => {
 
   expect(serviceA).not.toBe(serviceB);
 });
-
-test("it can only reset the singletons", ({ container }) => {
-  container.__registerAs("SimpleService", SimpleService);
-  const serviceA = container.__resolveByToken("SimpleService");
-
-  container.resetSingletons();
-
-  const serviceB = container.__resolveByToken("SimpleService");
-  expect(serviceA).not.toBe(serviceB);
-});

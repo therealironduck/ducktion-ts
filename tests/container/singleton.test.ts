@@ -14,3 +14,13 @@ test("it registeres any service as a singleton by default", ({ container }) => {
   // We check that both services are the same
   expect(service1).toBe(service2);
 });
+
+test("it can reset all singletons", ({ container }) => {
+  container.__registerAs("SimpleService", SimpleService);
+  const serviceA = container.__resolveByToken("SimpleService");
+
+  container.resetSingletons();
+
+  const serviceB = container.__resolveByToken("SimpleService");
+  expect(serviceA).not.toBe(serviceB);
+});
