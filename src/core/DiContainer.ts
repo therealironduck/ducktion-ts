@@ -141,13 +141,24 @@ class DiContainer {
       throw new Error(`Service is not registered`);
     }
 
+    // Next we check if there is already a registered singleton instance for the given type.
+    // If so, we will just return it
+    if (definition.instance != null) {
+      return definition.instance;
+    }
+
     // Add the current token to the dependency chain
     dependencyChain.push(token);
 
     // Resolve all dependencies recursively of the constructor
-    return new definition.serviceType(
+    const instance = new definition.serviceType(
       ...this.resolveParameters(definition.serviceType.__ducktionDependencies ?? [], dependencyChain),
     );
+
+    // Set the newly created instance as the singleton instance
+    definition.setInstance(instance);
+
+    return instance;
   }
 
   /**
@@ -220,8 +231,16 @@ class DiContainer {
   /**
    * Remove all registered services and singleton instances, basically resetting the container.
    */
-  public clear() {
+  public clear(): void {
     this.services.clear();
+  }
+
+  /**
+   * Reset every singleton instance. This will not remove the registered services.
+   * If you want to reset everything, use `clear` instead.
+   */
+  public resetSingletons(): void {
+    this.services.forEach((service) => service.setInstance(null));
   }
 }
 

@@ -14,32 +14,24 @@ test("it can clear a container", ({ container }) => {
   expect(() => container.__resolveByToken("SimpleService")).toThrow();
 });
 
-// TODO: Implement when singleton mode is implemented
-/**
-       [Test]
-        public void ItClearsAllSingletonInstances()
-        {
-            container.Register<SimpleService>();
-            var serviceA = container.Resolve<SimpleService>();
+test("it clears all singleton instances", ({ container }) => {
+  container.__registerAs("SimpleService", SimpleService);
+  const serviceA = container.__resolveByToken("SimpleService");
 
-            container.Clear();
-            
-            container.Register<SimpleService>();
-            var serviceB = container.Resolve<SimpleService>();
-            
-            Assert.AreNotEqual(serviceA, serviceB);
-        }
+  container.clear();
 
-        [Test]
-        public void ITCanOnlyResetTheSingletons()
-        {
-            container.Register<SimpleService>();
-            var serviceA = container.Resolve<SimpleService>();
+  container.__registerAs("SimpleService", SimpleService);
+  const serviceB = container.__resolveByToken("SimpleService");
 
-            container.Reset();
-            
-            var serviceB = container.Resolve<SimpleService>();
-            
-            Assert.AreNotEqual(serviceA, serviceB);
-        }
-        */
+  expect(serviceA).not.toBe(serviceB);
+});
+
+test("it can only reset the singletons", ({ container }) => {
+  container.__registerAs("SimpleService", SimpleService);
+  const serviceA = container.__resolveByToken("SimpleService");
+
+  container.resetSingletons();
+
+  const serviceB = container.__resolveByToken("SimpleService");
+  expect(serviceA).not.toBe(serviceB);
+});
