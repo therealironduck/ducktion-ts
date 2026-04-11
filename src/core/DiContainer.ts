@@ -141,13 +141,24 @@ class DiContainer {
       throw new Error(`Service is not registered`);
     }
 
+    // Next we check if there is already a registered singleton instance for the given type.
+    // If so, we will just return it
+    if (definition.instance != null) {
+      return definition.instance;
+    }
+
     // Add the current token to the dependency chain
     dependencyChain.push(token);
 
     // Resolve all dependencies recursively of the constructor
-    return new definition.serviceType(
+    const instance = new definition.serviceType(
       ...this.resolveParameters(definition.serviceType.__ducktionDependencies ?? [], dependencyChain),
     );
+
+    // Set the newly created instance as the singleton instance
+    definition.setInstance(instance);
+
+    return instance;
   }
 
   /**

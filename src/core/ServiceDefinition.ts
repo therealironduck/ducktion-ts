@@ -11,8 +11,34 @@ class ServiceDefinition {
    */
   public readonly serviceType: Instantiable;
 
+  /**
+   * The singleton instance of the service. Can be null if the service is not a singleton
+   * or if the service has not been resolved yet.
+   *
+   * Can only be set by the container.
+   */
+  private _instance: any = null;
+
   public constructor(serviceType: Instantiable) {
     this.serviceType = serviceType;
+  }
+
+  /**
+   * The singleton instance of the service. Can be null if the service is not a singleton
+   * or if the service has not been resolved yet.
+   *
+   * Can only be set by the container.
+   */
+  public get instance() {
+    return this._instance;
+  }
+
+  /**
+   * Set the instance of this service. This will override the
+   * concrete implementation or reset it if null is given.
+   */
+  public setInstance(instance: any) {
+    this._instance = instance;
   }
 }
 
