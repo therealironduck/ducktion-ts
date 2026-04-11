@@ -1,3 +1,5 @@
+import type { DucktionDependencies } from "../types";
+
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
 import ServiceDefinition from "./ServiceDefinition";
 
@@ -124,27 +126,51 @@ class DiContainer {
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
   public __resolveByToken(token: string): any {
+    return this.innerResolve(token, []);
+  }
+
+  private innerResolve(token: string, dependencyChain: string[]): any {
     // If we try to resolve scalar values (number, string, etc.) we just fail instantly
     if (token === SCALAR_TOKEN) {
       throw new Error(`Parameter is a scalar value and cannot be resolved`);
     }
 
+    // If the token is not registered yet, we fail
     const definition = this.services.get(token);
     if (!definition) {
       throw new Error(`Service is not registered`);
     }
 
-    // Resolve all dependencies recursively
-    const dependencies = definition.serviceType.__ducktionDependencies ?? [];
-    const resolvedDependencies = dependencies.map((dep: { name: string; token: string }): any => {
+    // Add the current token to the dependency chain
+    dependencyChain.push(token);
+
+    // Resolve all dependencies recursively of the constructor
+    return new definition.serviceType(
+      ...this.resolveParameters(definition.serviceType.__ducktionDependencies ?? [], dependencyChain),
+    );
+  }
+
+  /**
+   * This method takes a ducktion dependencies array and resolves all required parameters. It handles circular dependency
+   * checks aswell.
+   */
+  private resolveParameters(dependencies: DucktionDependencies, dependencyChain: string[]): any {
+    return dependencies.map((dep: { name: string; token: string }): any => {
+      // If the token is already in the dependencyChain, we have a circular dependency
+      if (dependencyChain.includes(dep.token)) {
+        throw new Error(`Circular dependency detected for parameter '${dep.name}'`);
+      }
+
+      // Add the token to the dependency chain
+      dependencyChain.push(dep.token);
+
+      // Resolve the parameter. If any error occurs, we wrap it in another error and bubble it up
       try {
-        return this.__resolveByToken(dep.token);
+        return this.innerResolve(dep.token, dependencyChain);
       } catch (error) {
         throw new Error(`Parameter '${dep.name}' could not be resolved`, { cause: error });
       }
     });
-
-    return new definition.serviceType(...resolvedDependencies);
   }
 
   /**
