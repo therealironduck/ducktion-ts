@@ -231,8 +231,16 @@ class DiContainer {
   /**
    * Remove all registered services and singleton instances, basically resetting the container.
    */
-  public clear() {
+  public clear(): void {
     this.services.clear();
+  }
+
+  /**
+   * Reset every singleton instance. This will not remove the registered services.
+   * If you want to reset everything, use `clear` instead.
+   */
+  public resetSingletons(): void {
+    this.services.forEach((service) => service.setInstance(null));
   }
 }
 

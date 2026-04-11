@@ -13,9 +13,8 @@ test("it can resolve a service recursively", ({ container }) => {
   expect(service).toBeInstanceOf(ServiceWithDependencies);
   expect(service.service).toBeInstanceOf(SimpleService);
 
-  // TODO: Test when singleton mode is implemented
-  // const simple = container.__resolveByToken("ISimpleService");
-  // expect(simple).toBe(service.service);
+  const simple = container.__resolveByToken("ISimpleService");
+  expect(simple).toBe(service.service);
 });
 
 describe("error handling", () => {
