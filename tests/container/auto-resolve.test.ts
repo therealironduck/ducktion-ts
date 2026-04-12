@@ -1,7 +1,7 @@
 import { expect } from "vitest";
 
 import { testWithAutoResolve as test } from "../base";
-import SimpleService from "../stubs/SimpleService";
+import SimpleService, { SecondSimpleService, ServiceWithConcreteDependencies } from "../stubs/SimpleService";
 
 test("it can automatically resolve unknown services", ({ container }) => {
   const result = container.__resolveWithType("SimpleService", SimpleService);
@@ -10,17 +10,15 @@ test("it can automatically resolve unknown services", ({ container }) => {
   expect(result).toBeInstanceOf(SimpleService);
 });
 
+test("it can automatically resolve unknown services recursively", ({ container }) => {
+  const result = container.__resolveWithType("ServiceWithConcreteDependencies", ServiceWithConcreteDependencies);
+  expect(result).toBeInstanceOf(ServiceWithConcreteDependencies);
+
+  const resultDep = result as ServiceWithConcreteDependencies;
+  expect(resultDep.service).toBeInstanceOf(SecondSimpleService);
+});
+
 /**
-        [Test]
-        public void ItCanAutomaticallyResolveUnknownServicesRecursively()
-        {
-            var result = container.Resolve<SimpleServiceWithDependency>();
-            Assert.NotNull(result);
-            Assert.IsInstanceOf<SimpleServiceWithDependency>(result);
-            
-            Assert.IsInstanceOf<AnotherService>(result.Another);
-        }
-        
         [Test]
         public void ItCanMixAutomaticResolvesWithManuallyRegisteredInterfaces()
         {

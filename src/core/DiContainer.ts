@@ -254,7 +254,7 @@ class DiContainer {
    * checks aswell.
    */
   private resolveParameters(dependencies: DucktionDependencies, dependencyChain: string[]): any {
-    return dependencies.map((dep: { name: string; token: string }): any => {
+    return dependencies.map((dep: DucktionDependencies[0]): any => {
       // If the token is already in the dependencyChain, we have a circular dependency
       if (dependencyChain.includes(dep.token)) {
         this.logger?.log(LogLevelEnum.error, `Circular dependency detected for parameter: ${dep.name}`);
@@ -266,7 +266,7 @@ class DiContainer {
 
       // Resolve the parameter. If any error occurs, we wrap it in another error and bubble it up
       try {
-        return this.innerResolve(dep.token, dependencyChain, undefined);
+        return this.innerResolve(dep.token, dependencyChain, dep.concrete);
       } catch (error) {
         throw new Error(`Parameter '${dep.name}' could not be resolved`, { cause: error });
       }
