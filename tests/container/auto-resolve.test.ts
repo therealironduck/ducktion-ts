@@ -1,7 +1,11 @@
 import { expect } from "vitest";
 
 import { testWithAutoResolve as test } from "../base";
-import SimpleService, { SecondSimpleService, ServiceWithConcreteDependencies } from "../stubs/SimpleService";
+import SimpleService, {
+  SecondSimpleService,
+  ServiceWithConcreteDependencies,
+  ServiceWithDependencies,
+} from "../stubs/SimpleService";
 
 test("it can automatically resolve unknown services", ({ container }) => {
   const result = container.__resolveWithType("SimpleService", SimpleService);
@@ -18,30 +22,24 @@ test("it can automatically resolve unknown services recursively", ({ container }
   expect(resultDep.service).toBeInstanceOf(SecondSimpleService);
 });
 
+test("it can automatically resolve with manually registered interfaces", ({ container }) => {
+  container.__registerAs("ISimpleService", SimpleService);
+
+  const result = container.__resolveWithType("ServiceWithDependencies", ServiceWithDependencies);
+  expect(result).toBeInstanceOf(ServiceWithDependencies);
+
+  const depResult = result as ServiceWithDependencies;
+  expect(depResult.service).toBeInstanceOf(SimpleService);
+});
+
+test("it stores them as singletons", ({ container }) => {
+  const result1 = container.__resolveWithType("SimpleService", SimpleService);
+  const result2 = container.__resolveWithType("SimpleService", SimpleService);
+
+  expect(result1).toBe(result2);
+});
+
 /**
-        [Test]
-        public void ItCanMixAutomaticResolvesWithManuallyRegisteredInterfaces()
-        {
-            container.Register<ISimpleInterface, SimpleServiceWithDependency>();
-            
-            var result = container.Resolve<ServiceWithDependencies>();
-            Assert.NotNull(result);
-            Assert.IsInstanceOf<ServiceWithDependencies>(result);
-            
-            Assert.IsInstanceOf<SimpleServiceWithDependency>(result.Simple);
-            
-            Assert.IsInstanceOf<AnotherService>((result.Simple as SimpleServiceWithDependency)?.Another);
-        }
-        
-        [Test]
-        public void ItStoresThemAsSingletons()
-        {
-            var result1 = container.Resolve<SimpleService>();
-            var result2 = container.Resolve<SimpleService>();
-            
-            Assert.AreSame(result1, result2);
-        }
-        
         [Test]
         public void ItCanOptionallyNotStoreThemAsSingletons()
         {

@@ -440,9 +440,7 @@ class MyService {
 `.trim();
 
     const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain(
-      '{ name: "logger", token: "/project/src/logger#ILogger", concrete: undefined }',
-    );
+    expect(result).toContain('{ name: "logger", token: "/project/src/logger#ILogger", concrete: undefined }');
   });
 
   test("sets concrete to undefined for a local interface", () => {
@@ -496,9 +494,7 @@ class MyService {
     expect(result).toContain(
       '{ name: "logger", token: "/project/src/debug-logger#DebugLogger", concrete: DebugLogger }',
     );
-    expect(result).toContain(
-      '{ name: "formatter", token: "/project/src/formatter#IFormatter", concrete: undefined }',
-    );
+    expect(result).toContain('{ name: "formatter", token: "/project/src/formatter#IFormatter", concrete: undefined }');
     expect(result).toContain(`{ name: "timeout", token: "${SCALAR_TOKEN}", concrete: undefined }`);
   });
 });

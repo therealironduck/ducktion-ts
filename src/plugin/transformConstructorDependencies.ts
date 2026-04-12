@@ -86,9 +86,7 @@ export const transformConstructorDependencies = (code: string, id: string): stri
             const token = buildToken(typeName, importMap, id);
 
             const isConcrete =
-              !typeOnlyImports.has(bareTypeName) &&
-              !interfaceNames.has(bareTypeName) &&
-              !enumNames.has(bareTypeName);
+              !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
 
             const concrete = isConcrete ? bareTypeName : "undefined";
 
