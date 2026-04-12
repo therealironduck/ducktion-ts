@@ -415,3 +415,90 @@ bus.override<IMyService, MyService>();
     expect(result).toBe(code);
   });
 });
+
+describe("__ducktionDependencies injection", () => {
+  test("sets concrete to the class reference for a concrete imported parameter", () => {
+    const code = `
+import { DebugLogger } from "./debug-logger";
+class MyService {
+  constructor(private logger: DebugLogger) {}
+}
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain(
+      '{ name: "logger", token: "/project/src/debug-logger#DebugLogger", concrete: DebugLogger }',
+    );
+  });
+
+  test("sets concrete to undefined for a type-only import", () => {
+    const code = `
+import type { ILogger } from "./logger";
+class MyService {
+  constructor(private logger: ILogger) {}
+}
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain(
+      '{ name: "logger", token: "/project/src/logger#ILogger", concrete: undefined }',
+    );
+  });
+
+  test("sets concrete to undefined for a local interface", () => {
+    const code = `
+interface ILogger {}
+class MyService {
+  constructor(private logger: ILogger) {}
+}
+`.trim();
+
+    const result = transform(code, "test.ts");
+    expect(result).toContain('{ name: "logger", token: "test.ts#ILogger", concrete: undefined }');
+  });
+
+  test("sets concrete to undefined for a local enum", () => {
+    const code = `
+enum Direction { Up, Down }
+class MyService {
+  constructor(private dir: Direction) {}
+}
+`.trim();
+
+    const result = transform(code, "test.ts");
+    expect(result).toContain('{ name: "dir", token: "test.ts#Direction", concrete: undefined }');
+  });
+
+  test.each(["string", "number", "boolean", "bigint", "symbol", "null", "undefined"])(
+    "sets concrete to undefined for scalar type %s",
+    (scalarType) => {
+      const code = `
+class MyService {
+  constructor(private value: ${scalarType}) {}
+}
+`.trim();
+
+      const result = transform(code, "test.ts");
+      expect(result).toContain(`{ name: "value", token: "${SCALAR_TOKEN}", concrete: undefined }`);
+    },
+  );
+
+  test("handles mixed parameters correctly", () => {
+    const code = `
+import { DebugLogger } from "./debug-logger";
+import type { IFormatter } from "./formatter";
+class MyService {
+  constructor(private logger: DebugLogger, private formatter: IFormatter, private timeout: number) {}
+}
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain(
+      '{ name: "logger", token: "/project/src/debug-logger#DebugLogger", concrete: DebugLogger }',
+    );
+    expect(result).toContain(
+      '{ name: "formatter", token: "/project/src/formatter#IFormatter", concrete: undefined }',
+    );
+    expect(result).toContain(`{ name: "timeout", token: "${SCALAR_TOKEN}", concrete: undefined }`);
+  });
+});
