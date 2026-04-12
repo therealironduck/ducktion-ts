@@ -110,9 +110,6 @@ describe("resolve", () => {
 
     expect(() => container.__resolveByToken("ScalarService")).toThrow();
 
-    logger.assertHasMessage(
-      LogLevelEnum.error,
-      "Service cant resolve parameter 'scalar', because it is a scalar value",
-    );
+    logger.assertHasMessage(LogLevelEnum.error, "Service cant resolve parameter, because it is a scalar value");
   });
 });

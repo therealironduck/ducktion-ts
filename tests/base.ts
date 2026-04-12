@@ -6,20 +6,26 @@ import { FakeLogger } from "./FakeLogger";
 
 export type DucktionTestConfig = {
   logLevel: LogLevel;
+  enableAutoResolve: boolean;
 };
 
 export const testWithConfig = (config: DucktionTestConfig) => {
   return baseTest.extend("container", async (): Promise<DiContainer> => {
     const container = new DiContainer();
-    container.configure(config.logLevel);
+    container.configure(config.logLevel, config.enableAutoResolve);
 
     return container;
   });
 };
 
-/* oxlint-disable eslint-plugin-jest(expect-expect) */
 export const test = testWithConfig({
   logLevel: LogLevelEnum.disabled,
+  enableAutoResolve: false,
+});
+
+export const testWithAutoResolve = testWithConfig({
+  logLevel: LogLevelEnum.disabled,
+  enableAutoResolve: true,
 });
 
 export function fakeLogger(container: DiContainer): FakeLogger {

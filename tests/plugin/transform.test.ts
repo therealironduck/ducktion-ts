@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { PACKAGE_NAME } from "../../src/constants";
 import { transform } from "../../src/plugin/transform";
+import { SCALAR_TOKEN } from "../../src/plugin/transformConstructorDependencies";
 
 describe("register<T>()", () => {
   test("transforms on a direct DiContainer import to __registerAs with a string token", () => {
@@ -98,7 +99,7 @@ bus.register<IOtherService>();
 });
 
 describe("resolve<T>()", () => {
-  test("transforms on a direct DiContainer import to __resolveByToken with a string token", () => {
+  test("transforms resolve<ConcreteClass> to __resolveWithType with token and class reference", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
 import { MyService } from "./services/my-service";
@@ -106,7 +107,7 @@ DiContainer.singleton.resolve<MyService>();
 `.trim();
 
     const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain('__resolveByToken("/project/src/services/my-service#MyService")');
+    expect(result).toContain('__resolveWithType("/project/src/services/my-service#MyService", MyService)');
     expect(result).not.toContain("resolve<MyService>");
   });
 
@@ -119,9 +120,47 @@ container.resolve<MyService>();
 `.trim();
 
     const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain('__resolveByToken("/project/src/services/my-service#MyService")');
+    expect(result).toContain('__resolveWithType("/project/src/services/my-service#MyService", MyService)');
     expect(result).not.toContain("resolve<MyService>");
   });
+
+  test("transforms resolve<IInterface> to __resolveByToken when T is a type-only import", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { IMyService } from "./services/my-service";
+DiContainer.singleton.resolve<IMyService>();
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__resolveByToken("/project/src/services/my-service#IMyService")');
+    expect(result).not.toContain("resolve<IMyService>");
+  });
+
+  test("transforms resolve<IInterface> to __resolveByToken when T is a local interface", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+interface IMyService {}
+DiContainer.singleton.resolve<IMyService>();
+`.trim();
+
+    const result = transform(code, "test.ts");
+    expect(result).toContain('__resolveByToken("test.ts#IMyService")');
+    expect(result).not.toContain("resolve<IMyService>");
+  });
+
+  test.each(["string", "number", "boolean", "bigint", "symbol", "null", "undefined"])(
+    "transforms resolve<%s> to __resolveByToken with the scalar token",
+    (scalarType) => {
+      const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.resolve<${scalarType}>();
+`.trim();
+
+      const result = transform(code, "test.ts");
+      expect(result).toContain(`__resolveByToken("${SCALAR_TOKEN}")`);
+      expect(result).not.toContain(`resolve<${scalarType}>`);
+    },
+  );
 });
 
 describe("register<T>() and resolve<T>() together", () => {
@@ -136,7 +175,7 @@ const svc = container.resolve<MyService>();
 
     const result = transform(code, "/project/src/app.ts");
     expect(result).toContain('__registerAs("/project/src/my-service#MyService", MyService)');
-    expect(result).toContain('__resolveByToken("/project/src/my-service#MyService")');
+    expect(result).toContain('__resolveWithType("/project/src/my-service#MyService", MyService)');
   });
 });
 

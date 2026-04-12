@@ -1,6 +1,6 @@
 import DiContainer, { LogLevelEnum } from "@therealironduck/ducktion-ts";
 
-DiContainer.singleton.configure(LogLevelEnum.disabled);
+DiContainer.singleton.configure(LogLevelEnum.disabled, false);
 
 interface ILoggerService {
   log(message: string): void;
