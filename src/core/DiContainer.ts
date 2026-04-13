@@ -1,4 +1,4 @@
-import type { DucktionDependencies } from "../types";
+import type { DucktionDependencies, SingletonMode } from "../types";
 import type { LogLevel } from "./DucktionLogger";
 
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
@@ -56,6 +56,19 @@ class DiContainer {
   private logLevel: LogLevel = LogLevelEnum.error;
 
   /**
+   * If set, Ducktion will try to automatically resolve any given type. This means you don't need
+   * to register any services manually. Manually registered services however will always take
+   * precedence over automatically resolved ones.
+   */
+  private enableAutoResolve: boolean = true;
+
+  /**
+   * Specify the singleton mode for automatically resolved services. This will only be used if
+   * enableAutoResolve is set to true.
+   */
+  private autoResolveSingletonMode: SingletonMode = "singleton";
+
+  /**
    * A reference to the logger instance. This is used to log all events happening in the container.
    * This variable is resolved within the `reinitialize` method and comes directly from the container.
    *
@@ -77,9 +90,16 @@ class DiContainer {
    * This method can be used to configure the container code-wise. It will reinitialize the container
    *
    * @param newLevel The log level
+   * @param newEnableAutoResolve Should auto resolve be enabled
    */
-  public configure(newLevel: LogLevel): void {
+  public configure(
+    newLevel: LogLevel = LogLevelEnum.error,
+    newEnableAutoResolve: boolean = true,
+    newAutoResolveSingletonMode: SingletonMode = "singleton",
+  ): void {
     this.logLevel = newLevel;
+    this.enableAutoResolve = newEnableAutoResolve;
+    this.autoResolveSingletonMode = newAutoResolveSingletonMode;
     this.reinitialize();
   }
 
@@ -172,39 +192,72 @@ class DiContainer {
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
   public __resolveByToken(token: string): any {
-    return this.innerResolve(token, undefined, []);
+    return this.innerResolve(token, [], undefined);
   }
 
-  private innerResolve(token: string, param: string | undefined, dependencyChain: string[]): any {
+  /**
+   * Resolve a service by token, with the concrete class type available for auto-resolution
+   * when the service is not yet registered.
+   *
+   * This method is called by the plugin-transformed `resolve<T>()` whenever T is a concrete
+   * class (not an interface or enum), passing T itself as the second argument so the container
+   * can instantiate it automatically without a prior `register<T>()` call.
+   *
+   * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
+   */
+  public __resolveWithType(token: string, concreteType: any): any {
+    return this.innerResolve(token, [], concreteType);
+  }
+
+  private innerResolve(token: string, dependencyChain: string[], concreteType: any): any {
     // If we try to resolve scalar values (number, string, etc.) we just fail instantly
     if (token === SCALAR_TOKEN) {
-      this.logger?.log(LogLevelEnum.error, `Service cant resolve parameter '${param}', because it is a scalar value`);
+      this.logger?.log(LogLevelEnum.error, "Service cant resolve parameter, because it is a scalar value");
       throw new Error(`Parameter is a scalar value and cannot be resolved`);
     }
 
-    // If the token is not registered yet, we fail
-    const definition = this.services.get(token);
-    if (!definition) {
+    // If there is no service registered for the given token
+    // AND auto resolve isn't enabled, we will throw an exception and cancel right away
+    if (!this.services.has(token) && !this.enableAutoResolve) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
       throw new Error(`Service is not registered`);
     }
 
     // Next we check if there is already a registered singleton instance for the given type.
     // If so, we will just return it
-    if (definition.instance != null) {
+    let definition = this.services.get(token);
+    if (definition && definition.instance !== null) {
       return definition.instance;
+    }
+
+    // Here we check the actual type we need to resolve.
+    // If the service isn't registered we just take the original type given. Otherwise we take the
+    // registered type.
+    const serviceType = definition?.serviceType ?? concreteType ?? undefined;
+    if (!serviceType) {
+      this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
+      throw new Error(`Service is not registered`);
     }
 
     // Add the current token to the dependency chain
     dependencyChain.push(token);
 
     // Resolve all dependencies recursively of the constructor
-    const instance = new definition.serviceType(
-      ...this.resolveParameters(definition.serviceType.__ducktionDependencies ?? [], dependencyChain),
+    const instance = new serviceType(
+      ...this.resolveParameters(serviceType.__ducktionDependencies ?? [], dependencyChain),
     );
 
+    let isAutoResolved = false;
+    if (!definition) {
+      definition = new ServiceDefinition(serviceType);
+      this.services.set(token, definition);
+      isAutoResolved = true;
+    }
+
     // Set the newly created instance as the singleton instance
-    definition.setInstance(instance);
+    if (!isAutoResolved || this.autoResolveSingletonMode === "singleton") {
+      definition.setInstance(instance);
+    }
 
     this.logger?.log(LogLevelEnum.debug, `Resolved service: ${token} => ${definition.serviceType.name}`);
 
@@ -216,7 +269,7 @@ class DiContainer {
    * checks aswell.
    */
   private resolveParameters(dependencies: DucktionDependencies, dependencyChain: string[]): any {
-    return dependencies.map((dep: { name: string; token: string }): any => {
+    return dependencies.map((dep: DucktionDependencies[0]): any => {
       // If the token is already in the dependencyChain, we have a circular dependency
       if (dependencyChain.includes(dep.token)) {
         this.logger?.log(LogLevelEnum.error, `Circular dependency detected for parameter: ${dep.name}`);
@@ -228,7 +281,7 @@ class DiContainer {
 
       // Resolve the parameter. If any error occurs, we wrap it in another error and bubble it up
       try {
-        return this.innerResolve(dep.token, dep.name, dependencyChain);
+        return this.innerResolve(dep.token, dependencyChain, dep.concrete);
       } catch (error) {
         throw new Error(`Parameter '${dep.name}' could not be resolved`, { cause: error });
       }

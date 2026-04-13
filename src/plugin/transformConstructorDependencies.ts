@@ -26,7 +26,12 @@
 import ts from "typescript";
 
 import { buildToken } from "./buildToken";
-import { collectTypeImportMap } from "./collectImports";
+import {
+  collectEnumNames,
+  collectInterfaceNames,
+  collectTypeImportMap,
+  collectTypeOnlyImports,
+} from "./collectImports";
 
 export const SCALAR_TOKEN = "ducktion__scalar";
 
@@ -50,6 +55,9 @@ function isScalarType(typeNode: ts.TypeNode): boolean {
 export const transformConstructorDependencies = (code: string, id: string): string => {
   const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
   const importMap = collectTypeImportMap(sourceFile);
+  const typeOnlyImports = collectTypeOnlyImports(sourceFile);
+  const interfaceNames = collectInterfaceNames(sourceFile);
+  const enumNames = collectEnumNames(sourceFile);
 
   const insertions: Array<{ pos: number; text: string }> = [];
 
@@ -68,11 +76,21 @@ export const transformConstructorDependencies = (code: string, id: string): stri
         if (ctor && ctor.parameters.length > 0) {
           const entries = ctor.parameters.map((param) => {
             const name = ts.isIdentifier(param.name) ? param.name.text : "";
-            const token =
-              param.type && !isScalarType(param.type)
-                ? buildToken(param.type.getText(sourceFile), importMap, id)
-                : SCALAR_TOKEN;
-            return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(token)} }`;
+
+            if (!param.type || isScalarType(param.type)) {
+              return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(SCALAR_TOKEN)}, concrete: undefined }`;
+            }
+
+            const typeName = param.type.getText(sourceFile);
+            const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
+            const token = buildToken(typeName, importMap, id);
+
+            const isConcrete =
+              !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
+
+            const concrete = isConcrete ? bareTypeName : "undefined";
+
+            return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(token)}, concrete: ${concrete} }`;
           });
 
           insertions.push({

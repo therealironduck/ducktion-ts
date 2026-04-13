@@ -19,3 +19,14 @@ export class ServiceWithDependencies {
     this.service = service;
   }
 }
+
+export class ServiceWithConcreteDependencies {
+  // This will be set by the Ducktion vite/rolldown plugin
+  static __ducktionDependencies = [{ name: "service", token: "SecondSimpleService", concrete: SecondSimpleService }];
+
+  public readonly service: SecondSimpleService;
+
+  public constructor(service: SecondSimpleService) {
+    this.service = service;
+  }
+}

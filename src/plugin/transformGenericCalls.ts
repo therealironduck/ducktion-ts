@@ -24,6 +24,24 @@ import {
   collectTypeOnlyImports,
   getRootIdentifier,
 } from "./collectImports";
+import { SCALAR_TOKEN } from "./transformConstructorDependencies";
+
+const SCALAR_KINDS = new Set([
+  ts.SyntaxKind.StringKeyword,
+  ts.SyntaxKind.NumberKeyword,
+  ts.SyntaxKind.BooleanKeyword,
+  ts.SyntaxKind.BigIntKeyword,
+  ts.SyntaxKind.SymbolKeyword,
+  ts.SyntaxKind.NullKeyword,
+  ts.SyntaxKind.UndefinedKeyword,
+]);
+
+function isScalarTypeArg(node: ts.TypeNode): boolean {
+  if (SCALAR_KINDS.has(node.kind)) return true;
+  // `null` in type position is a LiteralTypeNode wrapping NullKeyword, not a keyword node itself
+  if (ts.isLiteralTypeNode(node) && node.literal.kind === ts.SyntaxKind.NullKeyword) return true;
+  return false;
+}
 
 type TransformArgs = {
   typeArgs: ts.NodeArray<ts.TypeNode>;
@@ -46,6 +64,13 @@ type MethodConfig = {
    * the point of use.
    */
   buildRuntimeError?: (args: TransformArgs) => string | null;
+  /**
+   * When provided, overrides `replacementName` dynamically based on the call's
+   * type arguments. Useful when the same generic method needs to resolve to
+   * different runtime methods depending on whether T is a concrete class or an
+   * interface/enum.
+   */
+  buildReplacementName?: (args: TransformArgs) => string;
   buildArgs: (args: TransformArgs) => string;
 };
 
@@ -117,10 +142,23 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   resolve: {
     replacementName: "__resolveByToken",
     requiredTypeArgs: 1,
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
+    buildReplacementName: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
+      if (isScalarTypeArg(typeArgs[0])) return "__resolveByToken";
+      const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
+      if (typeOnlyImports.has(typeName) || interfaceNames.has(typeName) || enumNames.has(typeName)) {
+        return "__resolveByToken";
+      }
+      return "__resolveWithType";
+    },
+    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, typeOnlyImports, interfaceNames, enumNames }) => {
+      if (isScalarTypeArg(typeArgs[0])) return `"${SCALAR_TOKEN}"`;
       const typeName = typeArgs[0].getText(sourceFile);
+      const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
       const token = buildToken(typeName, importMap, fileId);
-      return `"${token}"`;
+      if (typeOnlyImports.has(bareTypeName) || interfaceNames.has(bareTypeName) || enumNames.has(bareTypeName)) {
+        return `"${token}"`;
+      }
+      return `"${token}", ${typeName}`;
     },
   },
   registerAs: {
@@ -204,10 +242,11 @@ export const transformGenericCalls = (code: string, id: string): string => {
               text: `(() => { throw new Error(${JSON.stringify(runtimeError)}); })()`,
             });
           } else {
+            const replacementName = config.buildReplacementName?.(transformArgs) ?? config.replacementName;
             replacements.push({
               start: node.expression.name.getStart(sourceFile),
               end: node.end,
-              text: `${config.replacementName}(${config.buildArgs(transformArgs)})`,
+              text: `${replacementName}(${config.buildArgs(transformArgs)})`,
             });
           }
         }
