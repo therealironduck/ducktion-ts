@@ -12,3 +12,5 @@ export type Instantiable = {
   new (...args: any[]): any;
   __ducktionDependencies?: DucktionDependencies;
 };
+
+export type SingletonMode = "singleton" | "non-singleton";

@@ -1,4 +1,4 @@
-import type { DucktionDependencies } from "../types";
+import type { DucktionDependencies, SingletonMode } from "../types";
 import type { LogLevel } from "./DucktionLogger";
 
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
@@ -63,6 +63,12 @@ class DiContainer {
   private enableAutoResolve: boolean = true;
 
   /**
+   * Specify the singleton mode for automatically resolved services. This will only be used if
+   * enableAutoResolve is set to true.
+   */
+  private autoResolveSingletonMode: SingletonMode = "singleton";
+
+  /**
    * A reference to the logger instance. This is used to log all events happening in the container.
    * This variable is resolved within the `reinitialize` method and comes directly from the container.
    *
@@ -86,9 +92,14 @@ class DiContainer {
    * @param newLevel The log level
    * @param newEnableAutoResolve Should auto resolve be enabled
    */
-  public configure(newLevel: LogLevel = LogLevelEnum.error, newEnableAutoResolve: boolean = true): void {
+  public configure(
+    newLevel: LogLevel = LogLevelEnum.error,
+    newEnableAutoResolve: boolean = true,
+    newAutoResolveSingletonMode: SingletonMode = "singleton",
+  ): void {
     this.logLevel = newLevel;
     this.enableAutoResolve = newEnableAutoResolve;
+    this.autoResolveSingletonMode = newAutoResolveSingletonMode;
     this.reinitialize();
   }
 
@@ -236,13 +247,17 @@ class DiContainer {
       ...this.resolveParameters(serviceType.__ducktionDependencies ?? [], dependencyChain),
     );
 
+    let isAutoResolved = false;
     if (!definition) {
       definition = new ServiceDefinition(serviceType);
       this.services.set(token, definition);
+      isAutoResolved = true;
     }
 
     // Set the newly created instance as the singleton instance
-    definition.setInstance(instance);
+    if (!isAutoResolved || this.autoResolveSingletonMode === "singleton") {
+      definition.setInstance(instance);
+    }
 
     this.logger?.log(LogLevelEnum.debug, `Resolved service: ${token} => ${definition.serviceType.name}`);
 
