@@ -3,7 +3,11 @@ import { describe, expect } from "vitest";
 import { test } from "../base";
 import { RecursiveAService, RecursiveBService, RecursiveWrapperService } from "../stubs/RecursiveServices";
 import ScalarService from "../stubs/ScalarService";
-import SimpleService, { ServiceWithDependencies } from "../stubs/SimpleService";
+import SimpleService, {
+  SecondSimpleService,
+  ServiceWithConcreteDependencies,
+  ServiceWithDependencies,
+} from "../stubs/SimpleService";
 
 test("it can resolve a service recursively", ({ container }) => {
   container.__registerAs("ISimpleService", SimpleService);
@@ -15,6 +19,14 @@ test("it can resolve a service recursively", ({ container }) => {
 
   const simple = container.__resolveByToken("ISimpleService");
   expect(simple).toBe(service.service);
+});
+
+test("it can resolve a service recursively if the type is an interface", ({ container }) => {
+  container.__registerAs("ISimpleService", ServiceWithConcreteDependencies);
+  container.__registerAs("SecondSimpleService", SecondSimpleService);
+
+  const service = container.__resolveByToken("ISimpleService");
+  expect(service).toBeInstanceOf(ServiceWithConcreteDependencies);
 });
 
 describe("error handling", () => {
