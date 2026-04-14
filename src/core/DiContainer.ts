@@ -111,7 +111,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public register<_T>(): ServiceDefinition {
+  public register<T>(_callback?: () => T): ServiceDefinition {
     throw new Error(
       "register<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -126,7 +126,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public registerAs<_Token, _Impl extends _Token>(): ServiceDefinition {
+  public registerAs<_Token, Impl extends _Token>(_callback?: () => Impl): ServiceDefinition {
     throw new Error(
       "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -139,7 +139,7 @@ class DiContainer {
    *
    * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
    */
-  public __registerAs(token: string, implementation: any): ServiceDefinition {
+  public __registerAs(token: string, implementation: any, callback?: () => any): ServiceDefinition {
     if (this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is already registered`);
       throw new Error("Service is already registered. Use `override` to override the service");
