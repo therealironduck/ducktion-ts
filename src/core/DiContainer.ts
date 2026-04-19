@@ -158,6 +158,8 @@ class DiContainer {
     }
 
     const definition = new ServiceDefinition(implementation);
+    if (callback) definition.setCallback(callback);
+
     this.services.set(token, definition);
 
     this.logger?.log(LogLevelEnum.debug, `Registered service: ${token} => ${implementation.name}`);
@@ -226,8 +228,13 @@ class DiContainer {
     // Next we check if there is already a registered singleton instance for the given type.
     // If so, we will just return it
     let definition = this.services.get(token);
-    if (definition && definition.instance !== null) {
+    if (definition && definition.instance !== undefined) {
       return definition.instance;
+    }
+
+    if (definition && definition.callback) {
+      return definition.callback();
+      // TODO: Store as singleton
     }
 
     // Here we check the actual type we need to resolve.
@@ -298,7 +305,7 @@ class DiContainer {
    * `__override` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public override<_Token, _Impl extends _Token>(): void {
+  public override<_Token, Impl extends _Token>(_callback?: () => Impl): void {
     throw new Error(
       "override<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -312,7 +319,7 @@ class DiContainer {
    *
    * Note: It is recommended to use the `override<Token, Impl>` method instead of calling this one directly.
    */
-  public __override(token: string, implementation: any): void {
+  public __override(token: string, implementation: any, callback?: () => any): void {
     if (!this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
       throw new Error("Service is not registered. Use `register` to register the service");
@@ -330,6 +337,8 @@ class DiContainer {
     }
 
     const definition = new ServiceDefinition(implementation);
+    if (callback) definition.setCallback(callback);
+
     this.services.set(token, definition);
 
     this.logger?.log(LogLevelEnum.debug, `Overridden service: ${token} => ${implementation.name}`);
@@ -354,7 +363,7 @@ class DiContainer {
   public resetSingletons(): void {
     this.logger?.log(LogLevelEnum.info, "Resetting container");
 
-    this.services.forEach((service) => service.setInstance(null));
+    this.services.forEach((service) => service.setInstance(undefined));
     this.reinitialize();
   }
 }

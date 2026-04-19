@@ -163,6 +163,141 @@ DiContainer.singleton.resolve<${scalarType}>();
   );
 });
 
+describe("register<T>() with a callback", () => {
+  test("forwards an arrow function callback as the third argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import { MyService } from "./my-service";
+DiContainer.singleton.register<MyService>(() => new MyService(42));
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__registerAs("/project/src/my-service#MyService", MyService, () => new MyService(42))');
+    expect(result).not.toContain("register<MyService>");
+  });
+
+  test("forwards a named function reference as the third argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import { MyService } from "./my-service";
+const factory = () => new MyService(1);
+DiContainer.singleton.register<MyService>(factory);
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__registerAs("/project/src/my-service#MyService", MyService, factory)');
+  });
+
+  test("does not transform when more than one argument is given", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import { MyService } from "./my-service";
+DiContainer.singleton.register<MyService>(() => new MyService(), extraArg);
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).not.toContain("__registerAs");
+  });
+});
+
+describe("registerAs<T, T2>() with a callback", () => {
+  test("forwards an arrow function callback as the third argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./logger";
+import { DebugLogger } from "./debug-logger";
+DiContainer.singleton.registerAs<ILogger, DebugLogger>(() => new DebugLogger("verbose"));
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain(
+      '__registerAs("/project/src/logger#ILogger", DebugLogger, () => new DebugLogger("verbose"))',
+    );
+    expect(result).not.toContain("registerAs<ILogger, DebugLogger>");
+  });
+
+  test("forwards a named function reference as the third argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./logger";
+import { DebugLogger } from "./debug-logger";
+const factory = () => new DebugLogger();
+DiContainer.singleton.registerAs<ILogger, DebugLogger>(factory);
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__registerAs("/project/src/logger#ILogger", DebugLogger, factory)');
+  });
+
+  test("does not transform when more than one argument is given", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./logger";
+import { DebugLogger } from "./debug-logger";
+DiContainer.singleton.registerAs<ILogger, DebugLogger>(() => new DebugLogger(), extraArg);
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).not.toContain("__registerAs");
+  });
+});
+
+describe("override<T, T2>() with a callback", () => {
+  test("forwards an arrow function callback as the third argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./logger";
+import { DebugLogger } from "./debug-logger";
+DiContainer.singleton.override<ILogger, DebugLogger>(() => new DebugLogger("verbose"));
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain(
+      '__override("/project/src/logger#ILogger", DebugLogger, () => new DebugLogger("verbose"))',
+    );
+    expect(result).not.toContain("override<ILogger, DebugLogger>");
+  });
+
+  test("forwards a named function reference as the third argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./logger";
+import { DebugLogger } from "./debug-logger";
+const factory = () => new DebugLogger();
+DiContainer.singleton.override<ILogger, DebugLogger>(factory);
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__override("/project/src/logger#ILogger", DebugLogger, factory)');
+  });
+
+  test("does not transform when more than one argument is given", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./logger";
+import { DebugLogger } from "./debug-logger";
+DiContainer.singleton.override<ILogger, DebugLogger>(() => new DebugLogger(), extraArg);
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).not.toContain("__override");
+  });
+});
+
+describe("resolve<T>() with a callback", () => {
+  test("does not transform when an argument is given", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import { MyService } from "./my-service";
+DiContainer.singleton.resolve<MyService>(someArg);
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).not.toContain("__resolveByToken");
+    expect(result).not.toContain("__resolveWithType");
+  });
+});
+
 describe("register<T>() and resolve<T>() together", () => {
   test("transforms both in the same file", () => {
     const code = `
