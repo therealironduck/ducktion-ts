@@ -47,41 +47,22 @@ test("it can override callbacks with existing instance", ({ container }) => {
   expect(scalarService.scalar).toBe(123);
 });
 
-/**
-        [Test]
-        public void ItCanRegisterCallbacksWithAbstractServicesOrInterfaces()
-        {
-            var simpleImplementation = new SimpleService();
-            var action = new Func<ISimpleInterface>(() => simpleImplementation);
+test("it stores the callback results as singletons by default", ({ container }) => {
+  let calledCount = 0;
+  const service = new ScalarService(123);
 
-            container.Register<ISimpleInterface>(action);
+  const action = () => {
+    calledCount++;
+    return service;
+  };
 
-            var service = container.Resolve<ISimpleInterface>();
-            Assert.AreSame(simpleImplementation, service);
-        }
+  container.__registerAs("ScalarService", ScalarService, action);
 
-        [Test]
-        public void ItStoresTheCallbackResultsAsSingletonByDefault()
-        {
-            var calledCount = 0;
-            var service = new ScalarService(123);
+  const service1 = container.__resolveByToken("ScalarService");
+  expect(calledCount).toBe(1);
 
-            var action = new Func<ScalarService>(() =>
-            {
-                calledCount++;
-                return service;
-            });
+  const service2 = container.__resolveByToken("ScalarService");
+  expect(calledCount).toBe(1);
 
-            container.Register<ScalarService>(action);
-
-            var service1 = container.Resolve<ScalarService>();
-            Assert.AreEqual(1, calledCount);
-            Assert.AreEqual(123, service1.Value);
-
-            service1.Value = 456;
-            var service2 = container.Resolve<ScalarService>();
-            Assert.AreEqual(1, calledCount);
-            Assert.AreEqual(456, service2.Value);
-        }
-    }
-	*/
+  expect(service1).toBe(service2);
+});

@@ -233,8 +233,10 @@ class DiContainer {
     }
 
     if (definition && definition.callback) {
-      return definition.callback();
-      // TODO: Store as singleton
+      const instance = definition.callback();
+      definition.setInstance(instance);
+
+      return instance;
     }
 
     // Here we check the actual type we need to resolve.
