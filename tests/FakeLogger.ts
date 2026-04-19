@@ -17,4 +17,8 @@ export class FakeLogger extends DucktionLogger {
 
     throw new Error(`Expected to find a log message with level '${level}' and message '${message}'`);
   }
+
+  public dump(): void {
+    console.log(this.messages);
+  }
 }

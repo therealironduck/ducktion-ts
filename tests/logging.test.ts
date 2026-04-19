@@ -2,6 +2,7 @@ import { describe, expect } from "vitest";
 
 import { LogLevelEnum } from "../src/core/DucktionLogger";
 import { fakeLogger, test } from "./base";
+import { ExampleConfigurator } from "./stubs/ExampleConfigurator";
 import { RecursiveAService, RecursiveBService } from "./stubs/RecursiveServices";
 import ScalarService from "./stubs/ScalarService";
 import SimpleService, { SecondSimpleService, BaseSimpleService } from "./stubs/SimpleService";
@@ -25,6 +26,16 @@ describe("general logs", () => {
     container.resetSingletons();
 
     logger.assertHasMessage(LogLevelEnum.info, "Resetting container");
+  });
+
+  test("it logs all used configurators in the info channel", ({ container }) => {
+    const logger = fakeLogger(container);
+    const configurator = new ExampleConfigurator();
+
+    container.addConfigurator(configurator);
+    container.reinitialize();
+
+    logger.assertHasMessage(LogLevelEnum.info, `Using configurator: ${configurator.name()}`);
   });
 });
 
