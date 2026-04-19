@@ -1,4 +1,4 @@
-import type { DucktionDependencies, SingletonMode } from "../types";
+import type { DiConfigurator, DucktionDependencies, SingletonMode } from "../types";
 import type { LogLevel } from "./DucktionLogger";
 
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
@@ -26,6 +26,8 @@ class DiContainer {
    */
   static get singleton(): DiContainer {
     DiContainer._singleton ??= new DiContainer();
+
+    // TODO: Do i want that?
     DiContainer._singleton.reinitialize();
 
     return DiContainer._singleton;
@@ -77,11 +79,31 @@ class DiContainer {
   private logger?: DucktionLogger;
 
   /**
+   * This is a list of all registered configurators. This list is used in the `reinitialize` method
+   * and all configurators are called to register their services.
+   */
+  private configurators: DiConfigurator[] = [];
+
+  /**
+   * Initialize the container. This will create a new logger instance with the configured log level.
+   * This is an alias for `reinitialize`
+   */
+  public initialize(): void {
+    this.reinitialize();
+  }
+
+  /**
    * Reinitialize the container. This will create a new logger instance with the configured log level.
    */
   public reinitialize(): void {
     this.logger = this.__resolveByToken(DUCKTION_LOGGER_TOKEN);
     this.logger?.configure(this.logLevel);
+
+    this.configurators.forEach((c) => {
+      c.register(this);
+
+      this.logger?.log(LogLevelEnum.info, `Using configurator: ${c.name()}`);
+    });
 
     this.logger?.log(LogLevelEnum.info, "Reinitialized container");
   }
@@ -101,6 +123,15 @@ class DiContainer {
     this.enableAutoResolve = newEnableAutoResolve;
     this.autoResolveSingletonMode = newAutoResolveSingletonMode;
     this.reinitialize();
+  }
+
+  /**
+   * Add a new configurator to the container. This will not execute the configurator, if
+   * the container is already initialized. If you want to reinitialize the container, use
+   * the `reinitialize` method.
+   */
+  public addConfigurator(configurator: DiConfigurator): void {
+    this.configurators.push(configurator);
   }
 
   /**
