@@ -6,7 +6,7 @@ import SimpleService from "../stubs/SimpleService";
 test("it can instantiate a new container at runtime", () => {
   const singleton = DiContainer.singleton;
 
-  expect(singleton).not.toBeNull();
+  expect(singleton).not.toBeNullable();
   expect(singleton).toBeInstanceOf(DiContainer);
 });
 

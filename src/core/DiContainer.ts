@@ -111,7 +111,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public register<_T>(): ServiceDefinition {
+  public register<T>(_callback?: () => T): ServiceDefinition {
     throw new Error(
       "register<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -126,7 +126,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public registerAs<_Token, _Impl extends _Token>(): ServiceDefinition {
+  public registerAs<_Token, Impl extends _Token>(_callback?: () => Impl): ServiceDefinition {
     throw new Error(
       "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -139,7 +139,7 @@ class DiContainer {
    *
    * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
    */
-  public __registerAs(token: string, implementation: any): ServiceDefinition {
+  public __registerAs(token: string, implementation: any, callback?: () => any): ServiceDefinition {
     if (this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is already registered`);
       throw new Error("Service is already registered. Use `override` to override the service");
@@ -158,6 +158,8 @@ class DiContainer {
     }
 
     const definition = new ServiceDefinition(implementation);
+    if (callback) definition.setCallback(callback);
+
     this.services.set(token, definition);
 
     this.logger?.log(LogLevelEnum.debug, `Registered service: ${token} => ${implementation.name}`);
@@ -226,8 +228,15 @@ class DiContainer {
     // Next we check if there is already a registered singleton instance for the given type.
     // If so, we will just return it
     let definition = this.services.get(token);
-    if (definition && definition.instance !== null) {
+    if (definition && definition.instance !== undefined) {
       return definition.instance;
+    }
+
+    if (definition && definition.callback) {
+      const instance = definition.callback();
+      definition.setInstance(instance);
+
+      return instance;
     }
 
     // Here we check the actual type we need to resolve.
@@ -298,7 +307,7 @@ class DiContainer {
    * `__override` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public override<_Token, _Impl extends _Token>(): void {
+  public override<_Token, Impl extends _Token>(_callback?: () => Impl): void {
     throw new Error(
       "override<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -312,7 +321,7 @@ class DiContainer {
    *
    * Note: It is recommended to use the `override<Token, Impl>` method instead of calling this one directly.
    */
-  public __override(token: string, implementation: any): void {
+  public __override(token: string, implementation: any, callback?: () => any): void {
     if (!this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
       throw new Error("Service is not registered. Use `register` to register the service");
@@ -330,6 +339,8 @@ class DiContainer {
     }
 
     const definition = new ServiceDefinition(implementation);
+    if (callback) definition.setCallback(callback);
+
     this.services.set(token, definition);
 
     this.logger?.log(LogLevelEnum.debug, `Overridden service: ${token} => ${implementation.name}`);
@@ -354,7 +365,7 @@ class DiContainer {
   public resetSingletons(): void {
     this.logger?.log(LogLevelEnum.info, "Resetting container");
 
-    this.services.forEach((service) => service.setInstance(null));
+    this.services.forEach((service) => service.setInstance(undefined));
     this.reinitialize();
   }
 }
