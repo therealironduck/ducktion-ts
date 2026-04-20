@@ -1,4 +1,4 @@
-import type { DiConfigurator, DucktionDependencies, SingletonMode } from "../types";
+import type { ContainerOptions, DiConfigurator, DucktionDependencies, LazyMode, SingletonMode } from "../types";
 import type { LogLevel } from "./DucktionLogger";
 
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
@@ -71,6 +71,12 @@ class DiContainer {
   private autoResolveSingletonMode: SingletonMode = "singleton";
 
   /**
+   * Specify the default lazy mode any service should be registered with. This will only be used
+   * if no other lazy mode is specified during registration.
+   */
+  private defaultLazyMode: LazyMode = "lazy";
+
+  /**
    * A reference to the logger instance. This is used to log all events happening in the container.
    * This variable is resolved within the `reinitialize` method and comes directly from the container.
    *
@@ -105,7 +111,20 @@ class DiContainer {
       this.logger?.log(LogLevelEnum.info, `Using configurator: ${c.name()}`);
     });
 
+    this.initializeNonLazyServices();
+
     this.logger?.log(LogLevelEnum.info, "Reinitialized container");
+  }
+
+  private initializeNonLazyServices(): void {
+    this.services.forEach((definition, key) => {
+      if (
+        definition.lazyMode === "non-lazy" ||
+        (definition.lazyMode === undefined && this.defaultLazyMode === "non-lazy")
+      ) {
+        this.__resolveByToken(key);
+      }
+    });
   }
 
   /**
@@ -114,14 +133,18 @@ class DiContainer {
    * @param newLevel The log level
    * @param newEnableAutoResolve Should auto resolve be enabled
    */
-  public configure(
-    newLevel: LogLevel = LogLevelEnum.error,
-    newEnableAutoResolve: boolean = true,
-    newAutoResolveSingletonMode: SingletonMode = "singleton",
-  ): void {
+  public configure(options: Partial<ContainerOptions>): void {
+    const {
+      newLevel = LogLevelEnum.error,
+      newEnableAutoResolve = true,
+      newAutoResolveSingletonMode = "singleton",
+      newDefaultLazyMode = "lazy",
+    } = options;
+
     this.logLevel = newLevel;
     this.enableAutoResolve = newEnableAutoResolve;
     this.autoResolveSingletonMode = newAutoResolveSingletonMode;
+    this.defaultLazyMode = newDefaultLazyMode;
     this.reinitialize();
   }
 
@@ -338,7 +361,7 @@ class DiContainer {
    * `__override` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public override<_Token, Impl extends _Token>(_callback?: () => Impl): void {
+  public override<_Token, Impl extends _Token>(_callback?: () => Impl): ServiceDefinition {
     throw new Error(
       "override<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -352,7 +375,7 @@ class DiContainer {
    *
    * Note: It is recommended to use the `override<Token, Impl>` method instead of calling this one directly.
    */
-  public __override(token: string, implementation: any, callback?: () => any): void {
+  public __override(token: string, implementation: any, callback?: () => any): ServiceDefinition {
     if (!this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
       throw new Error("Service is not registered. Use `register` to register the service");
@@ -375,6 +398,8 @@ class DiContainer {
     this.services.set(token, definition);
 
     this.logger?.log(LogLevelEnum.debug, `Overridden service: ${token} => ${implementation.name}`);
+
+    return definition;
   }
 
   /**

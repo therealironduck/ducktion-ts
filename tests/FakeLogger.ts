@@ -18,6 +18,16 @@ export class FakeLogger extends DucktionLogger {
     throw new Error(`Expected to find a log message with level '${level}' and message '${message}'`);
   }
 
+  public assertHasNoMessage(level: LogLevel, message: string): void {
+    for (let msg of this.messages) {
+      if (msg[0] === level && msg[1] === message) {
+        throw new Error(
+          `Expected to NOT find a log message with level '${level}' and message '${message}', but found one.`,
+        );
+      }
+    }
+  }
+
   public dump(): void {
     console.log(this.messages);
   }

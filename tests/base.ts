@@ -1,35 +1,27 @@
 import { test as baseTest } from "vitest";
 
 import DiContainer from "../src";
-import { DUCKTION_LOGGER_TOKEN, LogLevel, LogLevelEnum } from "../src/core/DucktionLogger";
-import { SingletonMode } from "../src/types";
+import { DUCKTION_LOGGER_TOKEN, LogLevelEnum } from "../src/core/DucktionLogger";
+import { ContainerOptions } from "../src/types";
 import { FakeLogger } from "./FakeLogger";
 
-export type DucktionTestConfig = {
-  logLevel: LogLevel;
-  enableAutoResolve: boolean;
-  autoResolveSingletonMode: SingletonMode;
-};
-
-export const testWithConfig = (config: DucktionTestConfig) => {
+export const testWithConfig = (config: Partial<ContainerOptions>) => {
   return baseTest.extend("container", async (): Promise<DiContainer> => {
     const container = new DiContainer();
-    container.configure(config.logLevel, config.enableAutoResolve, config.autoResolveSingletonMode);
+    container.configure(config);
 
     return container;
   });
 };
 
 export const test = testWithConfig({
-  logLevel: LogLevelEnum.disabled,
-  enableAutoResolve: false,
-  autoResolveSingletonMode: "singleton",
+  newLevel: LogLevelEnum.disabled,
+  newEnableAutoResolve: false,
 });
 
 export const testWithAutoResolve = testWithConfig({
-  logLevel: LogLevelEnum.disabled,
-  enableAutoResolve: true,
-  autoResolveSingletonMode: "singleton",
+  newLevel: LogLevelEnum.disabled,
+  newEnableAutoResolve: true,
 });
 
 export function fakeLogger(container: DiContainer): FakeLogger {
