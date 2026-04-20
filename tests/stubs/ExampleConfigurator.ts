@@ -9,7 +9,7 @@ export class ExampleConfigurator {
     this.called = true;
 
     container.__registerAs("ISimpleService", SimpleService);
-    container.__registerAs("ScalarService", ScalarService, () => new ScalarService(12));
+    container.__registerAs("ScalarService", ScalarService).setCallback(() => new ScalarService(12));
   }
 
   public name(): string {

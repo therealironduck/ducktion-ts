@@ -10,6 +10,7 @@ test("it creates a service definition with default values", ({ container }) => {
   expect(definition.instance).toBeNullable();
   expect(definition.callback).toBeNullable();
   expect(definition.lazyMode).toBeNullable();
+  expect(definition.singletonMode).toBeNullable();
 });
 
 describe("instance", () => {

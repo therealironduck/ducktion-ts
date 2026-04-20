@@ -57,8 +57,6 @@ type MethodConfig = {
   replacementName: string;
   /** Minimum number of type arguments required; calls with fewer are skipped. */
   requiredTypeArgs: number;
-  /** When true, an optional single callback argument is forwarded to the runtime method. */
-  allowCallback?: boolean;
   /**
    * When provided, called before buildArgs. Return a non-null error message to
    * replace the entire call expression with a runtime throw instead of the
@@ -131,7 +129,6 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   register: {
     replacementName: "__registerAs",
     requiredTypeArgs: 1,
-    allowCallback: true,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
       return validateInstantiableType(typeName, "register", true, { typeOnlyImports, interfaceNames, enumNames });
@@ -167,7 +164,6 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   registerAs: {
     replacementName: "__registerAs",
     requiredTypeArgs: 2,
-    allowCallback: true,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
       return validateInstantiableType(implTypeName, "registerAs", false, {
@@ -186,7 +182,6 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   override: {
     replacementName: "__override",
     requiredTypeArgs: 2,
-    allowCallback: true,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
       return validateInstantiableType(implTypeName, "override", false, { typeOnlyImports, interfaceNames, enumNames });
@@ -225,8 +220,7 @@ export const transformGenericCalls = (code: string, id: string): string => {
     ) {
       const methodName = node.expression.name.text;
       const config = METHOD_REPLACEMENTS[methodName];
-      const hasCallback = node.arguments.length === 1 && (config?.allowCallback ?? false);
-      const isValidArgCount = node.arguments.length === 0 || hasCallback;
+      const isValidArgCount = node.arguments.length === 0;
       if (config !== undefined && isValidArgCount && node.typeArguments.length >= config.requiredTypeArgs) {
         const root = getRootIdentifier(node.expression.expression);
         if (root && diBindings.has(root)) {
@@ -249,11 +243,10 @@ export const transformGenericCalls = (code: string, id: string): string => {
             });
           } else {
             const replacementName = config.buildReplacementName?.(transformArgs) ?? config.replacementName;
-            const callbackArg = hasCallback ? `, ${node.arguments[0].getText(sourceFile)}` : "";
             replacements.push({
               start: node.expression.name.getStart(sourceFile),
               end: node.end,
-              text: `${replacementName}(${config.buildArgs(transformArgs)}${callbackArg})`,
+              text: `${replacementName}(${config.buildArgs(transformArgs)})`,
             });
           }
         }
