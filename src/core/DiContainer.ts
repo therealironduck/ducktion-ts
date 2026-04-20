@@ -77,6 +77,14 @@ class DiContainer {
   private defaultLazyMode: LazyMode = "lazy";
 
   /**
+   * Specify the default singleton mode any service should be registered with. This will only
+   * be used if no other singleton mode is specified during registration.
+   *
+   * Auto resolved services will always use the `autoResolveSingletonMode` variable.
+   */
+  private defaultSingletonMode: SingletonMode = "singleton";
+
+  /**
    * A reference to the logger instance. This is used to log all events happening in the container.
    * This variable is resolved within the `reinitialize` method and comes directly from the container.
    *
@@ -139,12 +147,14 @@ class DiContainer {
       newEnableAutoResolve = true,
       newAutoResolveSingletonMode = "singleton",
       newDefaultLazyMode = "lazy",
+      newDefaultSingletonMode = "singleton",
     } = options;
 
     this.logLevel = newLevel;
     this.enableAutoResolve = newEnableAutoResolve;
     this.autoResolveSingletonMode = newAutoResolveSingletonMode;
     this.defaultLazyMode = newDefaultLazyMode;
+    this.defaultSingletonMode = newDefaultSingletonMode;
     this.reinitialize();
   }
 
@@ -288,7 +298,9 @@ class DiContainer {
 
     if (definition && definition.callback) {
       const instance = definition.callback();
-      definition.setInstance(instance);
+      if ((definition.singletonMode ?? this.defaultSingletonMode) === "singleton") {
+        definition.setInstance(instance);
+      }
 
       return instance;
     }
@@ -318,7 +330,11 @@ class DiContainer {
     }
 
     // Set the newly created instance as the singleton instance
-    if (!isAutoResolved || this.autoResolveSingletonMode === "singleton") {
+    const storeSingleton =
+      (isAutoResolved && this.autoResolveSingletonMode === "singleton") ||
+      (!isAutoResolved && (definition.singletonMode ?? "singleton") === this.defaultSingletonMode);
+
+    if (storeSingleton) {
       definition.setInstance(instance);
     }
 
