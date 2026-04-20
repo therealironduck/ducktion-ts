@@ -1,4 +1,4 @@
-import type { Instantiable } from "../types";
+import type { Instantiable, LazyMode } from "../types";
 
 /**
  * This class hold all the information needed to resolve a service.
@@ -24,6 +24,12 @@ class ServiceDefinition {
    */
   private _callback: (() => any) | undefined = undefined;
 
+  /**
+   * Specify if the service should be resolved lazily or not. By default, no lazy mode
+   * is specified (undefined), which means that the container will use the default lazy mode.
+   */
+  private _lazyMode: LazyMode | undefined = undefined;
+
   public constructor(serviceType: Instantiable) {
     this.serviceType = serviceType;
   }
@@ -42,8 +48,10 @@ class ServiceDefinition {
    * Set the instance of this service. This will override the
    * concrete implementation or reset it if undefined is given.
    */
-  public setInstance(instance: any) {
+  public setInstance(instance: any): ServiceDefinition {
     this._instance = instance;
+
+    return this;
   }
 
   /**
@@ -57,9 +65,46 @@ class ServiceDefinition {
    * Set the callback which will be executed when the service is
    * resolved. This will also reset the instance if it was set.
    */
-  public setCallback(callback: (() => any) | undefined): void {
+  public setCallback(callback: (() => any) | undefined): ServiceDefinition {
     this._callback = callback;
     this._instance = undefined;
+
+    return this;
+  }
+
+  /**
+   * Specify if the service should be resolved lazily or not. By default, no lazy mode
+   * is specified (undefined), which means that the container will use the default lazy mode.
+   */
+  public get lazyMode(): LazyMode | undefined {
+    return this._lazyMode;
+  }
+
+  /**
+   * Mark this service as non lazy.
+   */
+  public nonLazy(): ServiceDefinition {
+    this._lazyMode = "non-lazy";
+
+    return this;
+  }
+
+  /**
+   * Mark this service as lazy.
+   */
+  public lazy(): ServiceDefinition {
+    this._lazyMode = "lazy";
+
+    return this;
+  }
+
+  /**
+   * Set the lazy mode of this service.
+   */
+  public setLazyMode(lazyMode: LazyMode | undefined): ServiceDefinition {
+    this._lazyMode = lazyMode;
+
+    return this;
   }
 }
 
