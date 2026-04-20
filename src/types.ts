@@ -78,4 +78,9 @@ export type ContainerOptions = {
    * New default lazy mode. Can be overriden by any service. Default: `lazy`
    */
   newDefaultLazyMode: LazyMode;
+
+  /**
+   * New default singleton mode. Can be overriden by any service. Default: `singleton`
+   */
+  newDefaultSingletonMode: SingletonMode;
 };

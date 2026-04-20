@@ -86,3 +86,26 @@ describe("lazy", () => {
     expect(definition.lazyMode).toBe("lazy");
   });
 });
+
+describe("singleton", () => {
+  test("it can toggle the singleton mode", ({ container }) => {
+    const definition = container.__registerAs("SimpleService", SimpleService);
+    definition.nonSingleton();
+    expect(definition.singletonMode).toBe("non-singleton");
+
+    definition.singleton();
+    expect(definition.singletonMode).toBe("singleton");
+
+    definition.transient();
+    expect(definition.singletonMode).toBe("non-singleton");
+
+    definition.setSingletonMode("singleton");
+    expect(definition.singletonMode).toBe("singleton");
+  });
+
+  test("it can toggle the singleton mode fluently", ({ container }) => {
+    const definition = container.__registerAs("SimpleService", SimpleService);
+    definition.singleton().nonSingleton().setSingletonMode("singleton").transient();
+    expect(definition.singletonMode).toBe("non-singleton");
+  });
+});

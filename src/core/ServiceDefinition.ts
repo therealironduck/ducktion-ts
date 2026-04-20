@@ -1,4 +1,4 @@
-import type { Instantiable, LazyMode } from "../types";
+import type { Instantiable, LazyMode, SingletonMode } from "../types";
 
 /**
  * This class hold all the information needed to resolve a service.
@@ -29,6 +29,12 @@ class ServiceDefinition {
    * is specified (undefined), which means that the container will use the default lazy mode.
    */
   private _lazyMode: LazyMode | undefined = undefined;
+
+  /**
+   * Specify if the service should be stored as a singleton or not. By default, no singleton
+   * mode is specified (undefined), which means that the container will use the default singleton mode.
+   */
+  private _singletonMode: SingletonMode | undefined = undefined;
 
   public constructor(serviceType: Instantiable) {
     this.serviceType = serviceType;
@@ -104,6 +110,49 @@ class ServiceDefinition {
   public setLazyMode(lazyMode: LazyMode | undefined): ServiceDefinition {
     this._lazyMode = lazyMode;
 
+    return this;
+  }
+
+  /*
+   * Specify if the service should be stored as a singleton or not. By default, no singleton
+   * mode is specified (undefined), which means that the container will use the default singleton mode.
+   */
+  public get singletonMode(): SingletonMode | undefined {
+    return this._singletonMode;
+  }
+
+  /**
+   * Mark this service as non singleton
+   */
+  public nonSingleton(): ServiceDefinition {
+    this._singletonMode = "non-singleton";
+
+    return this;
+  }
+
+  /**
+   * Mark this service as non singleton. Alias for `nonSingleton`
+   */
+  public transient(): ServiceDefinition {
+    this._singletonMode = "non-singleton";
+
+    return this;
+  }
+
+  /**
+   * Mark this service as singleton
+   */
+  public singleton(): ServiceDefinition {
+    this._singletonMode = "singleton";
+
+    return this;
+  }
+
+  /**
+   * Set the singleton mode of this service.
+   */
+  public setSingletonMode(singletonMode: SingletonMode | undefined): ServiceDefinition {
+    this._singletonMode = singletonMode;
     return this;
   }
 }
