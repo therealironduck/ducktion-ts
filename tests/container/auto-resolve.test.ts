@@ -1,6 +1,5 @@
 import { expect } from "vitest";
 
-import { LogLevelEnum } from "../../src";
 import { testWithAutoResolve as test } from "../base";
 import SimpleService, {
   SecondSimpleService,
@@ -41,7 +40,7 @@ test("it stores them as singletons", ({ container }) => {
 });
 
 test("it can optionally not store them as singletons", ({ container }) => {
-  container.configure(LogLevelEnum.disabled, true, "non-singleton");
+  container.configure({ newAutoResolveSingletonMode: "non-singleton" });
 
   const result1 = container.__resolveWithType("SimpleService", SimpleService);
   const result2 = container.__resolveWithType("SimpleService", SimpleService);

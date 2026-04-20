@@ -1,6 +1,9 @@
 import DiContainer, { LogLevelEnum } from "@therealironduck/ducktion-ts";
 
-DiContainer.singleton.configure(LogLevelEnum.disabled, false);
+DiContainer.singleton.configure({
+  newLevel: LogLevelEnum.disabled,
+  newEnableAutoResolve: false,
+});
 
 interface IGreetingService {
   greet(): string;

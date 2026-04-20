@@ -1,4 +1,4 @@
-import type { DiConfigurator, DucktionDependencies, LazyMode, SingletonMode } from "../types";
+import type { ContainerOptions, DiConfigurator, DucktionDependencies, LazyMode, SingletonMode } from "../types";
 import type { LogLevel } from "./DucktionLogger";
 
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
@@ -133,13 +133,14 @@ class DiContainer {
    * @param newLevel The log level
    * @param newEnableAutoResolve Should auto resolve be enabled
    */
-  // TODO: Refactor to use Partial<Config> or something and then merge default values
-  public configure(
-    newLevel: LogLevel = LogLevelEnum.error,
-    newEnableAutoResolve: boolean = true,
-    newAutoResolveSingletonMode: SingletonMode = "singleton",
-    newDefaultLazyMode: LazyMode = "lazy",
-  ): void {
+  public configure(options: Partial<ContainerOptions>): void {
+    const {
+      newLevel = LogLevelEnum.error,
+      newEnableAutoResolve = true,
+      newAutoResolveSingletonMode = "singleton",
+      newDefaultLazyMode = "lazy",
+    } = options;
+
     this.logLevel = newLevel;
     this.enableAutoResolve = newEnableAutoResolve;
     this.autoResolveSingletonMode = newAutoResolveSingletonMode;

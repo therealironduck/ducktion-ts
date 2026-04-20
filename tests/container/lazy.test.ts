@@ -16,7 +16,7 @@ test("it can register a service as non lazy", ({ container }) => {
 test("it can set the default to non-lazy", ({ container }) => {
   const logger = fakeLogger(container);
 
-  container.configure(LogLevelEnum.debug, false, "singleton", "non-lazy");
+  container.configure({ newDefaultLazyMode: "non-lazy" });
 
   container.__registerAs("ServiceWithLogger", ServiceWithLogger);
   container.__registerAs("SecondServiceWithLogger", SecondServiceWithLogger);
@@ -29,7 +29,7 @@ test("it can set the default to non-lazy", ({ container }) => {
 test("it can set the default to non-lazy but register specific services as lazy", ({ container }) => {
   const logger = fakeLogger(container);
 
-  container.configure(LogLevelEnum.debug, false, "singleton", "non-lazy");
+  container.configure({ newDefaultLazyMode: "non-lazy" });
 
   container.__registerAs("ServiceWithLogger", ServiceWithLogger).lazy();
   container.__registerAs("SecondServiceWithLogger", SecondServiceWithLogger);

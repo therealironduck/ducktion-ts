@@ -1,4 +1,5 @@
 import type DiContainer from "./core/DiContainer";
+import type { LogLevel } from "./core/DucktionLogger";
 
 export interface Options {
   // define your plugin options here
@@ -52,4 +53,29 @@ export type DiConfigurator = {
    * This method should return a readable name for debugging and logging.
    */
   name(): string;
+};
+
+/**
+ * All options to configure the DI container.
+ */
+export type ContainerOptions = {
+  /**
+   * The new log level to be used. Default: `error`
+   */
+  newLevel: LogLevel;
+
+  /**
+   * Should auto-resolve be enabled. Default: `true`
+   */
+  newEnableAutoResolve: boolean;
+
+  /**
+   * Singleton mode for auto resolved services. Default: `singleton`
+   */
+  newAutoResolveSingletonMode: SingletonMode;
+
+  /**
+   * New default lazy mode. Can be overriden by any service. Default: `lazy`
+   */
+  newDefaultLazyMode: LazyMode;
 };
