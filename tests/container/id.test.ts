@@ -47,7 +47,3 @@ describe("override", () => {
     expect(container.__resolveByToken("ISimpleService", "service123")).toBeInstanceOf(SecondSimpleService);
   });
 });
-
-/**
-		// TODO: E2E test
-	*/
