@@ -1,4 +1,11 @@
-import type { ContainerOptions, DiConfigurator, DucktionDependencies, LazyMode, SingletonMode } from "../types";
+import type {
+  ContainerOptions,
+  DiConfigurator,
+  DucktionDependencies,
+  Instantiable,
+  LazyMode,
+  SingletonMode,
+} from "../types";
 import type { LogLevel } from "./DucktionLogger";
 
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
@@ -280,6 +287,10 @@ class DiContainer {
     return this.innerResolve(token, [], concreteType);
   }
 
+  /**
+   * Inner logic to resolve a component. This method handles the recursive resolving of all
+   * parameters of the constructor. Also it checks for circular dependencies.
+   */
   private innerResolve(token: string, dependencyChain: string[], concreteType: any): any {
     // If we try to resolve scalar values (number, string, etc.) we just fail instantly
     if (token === SCALAR_TOKEN) {
@@ -301,12 +312,18 @@ class DiContainer {
       return definition.instance;
     }
 
+    // Next we check if there is a callback which should be executed
     if (definition && definition.callback) {
+      // If so, we will execute the callback
       const instance = definition.callback();
+
+      // If the service is in singleton mode, we will store the instance
+      // If no singleton mode is specified, we will use the default singleton mode
       if ((definition.singletonMode ?? this.defaultSingletonMode) === "singleton") {
-        definition.setInstance(instance);
+        this.storeAsSingleton(token, instance, definition.serviceType);
       }
 
+      // Anyway, return the resolved instance
       return instance;
     }
 
@@ -327,6 +344,8 @@ class DiContainer {
       ...this.resolveParameters(serviceType.__ducktionDependencies ?? [], dependencyChain),
     );
 
+    // And resolve all dependencies that occur because of the Resolve decorator
+    // TODO: Extract into own public method
     // Inject @resolve()-decorated properties
     for (const prop of serviceType.__ducktionResolveProperties ?? []) {
       const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
@@ -337,26 +356,42 @@ class DiContainer {
     for (const method of serviceType.__ducktionResolveMethods ?? []) {
       instance[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain]));
     }
+    // END TODO
 
-    let isAutoResolved = false;
-    if (!definition) {
-      definition = new ServiceDefinition(serviceType);
-      this.services.set(token, definition);
-      isAutoResolved = true;
-    }
+    const isAutoResolved = definition === undefined;
 
-    // Set the newly created instance as the singleton instance
+    // This is a complex check to determine if the resolved service should be stored as a singleton
+    // Basically it will be stored if:
+    // (a) auto resolve is enabled and the auto resolve singleton mode is set to singleton
+    // or (b) auto resolve is disabled and the service singleton mode is set to singleton
+    // If in case (b) the service singleton mode is not set, we will use the default singleton mode
     const storeSingleton =
       (isAutoResolved && this.autoResolveSingletonMode === "singleton") ||
-      (!isAutoResolved && (definition.singletonMode ?? "singleton") === this.defaultSingletonMode);
+      (!isAutoResolved && (definition?.singletonMode ?? "singleton") === this.defaultSingletonMode);
 
     if (storeSingleton) {
-      definition.setInstance(instance);
+      this.storeAsSingleton(token, instance, serviceType);
     }
 
-    this.logger?.log(LogLevelEnum.debug, `Resolved service: ${token} => ${definition.serviceType.name}`);
+    this.logger?.log(LogLevelEnum.debug, `Resolved service: ${token} => ${serviceType.name}`);
 
     return instance;
+  }
+
+  /**
+   * Register a given instance as a singleton for the given type.
+   * If the type is already registered, it will override the instance.
+   * Otherwise it will create a new service definition.
+   */
+  private storeAsSingleton(token: string, instance: any, concreteType: Instantiable): void {
+    const definition = this.services.get(token);
+    if (definition) {
+      definition.setInstance(instance);
+
+      return;
+    }
+
+    this.services.set(token, new ServiceDefinition(concreteType).setInstance(instance));
   }
 
   /**
