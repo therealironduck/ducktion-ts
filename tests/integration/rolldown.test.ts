@@ -36,6 +36,12 @@ test("it does not replace `register<T>()` calls on unrelated classes", async () 
   expect(code).not.toContain("__registerAs(");
 });
 
+test("it propagates a build error when a DI method is called without type arguments", async () => {
+  await expect(bundle("./tests/stubs/missing-type-arg.ts")).rejects.toThrow(
+    "`register()` called without required type arguments",
+  );
+});
+
 test("it only replaces `register<T>()` on DiContainer, not on unrelated classes in the same file", async () => {
   const code = await bundle("./tests/stubs/mixed.ts");
 

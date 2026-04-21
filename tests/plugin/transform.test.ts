@@ -199,6 +199,93 @@ DiContainer.singleton.resolve<IMyService>("svc1");
   });
 });
 
+describe("build errors for missing type arguments", () => {
+  test("throws a build error when register() is called without type arguments", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.register();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `register()` called without required type arguments",
+    );
+  });
+
+  test("throws a build error when resolve() is called without type arguments", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.resolve();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `resolve()` called without required type arguments",
+    );
+  });
+
+  test("throws a build error when registerAs() is called without type arguments", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.registerAs();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `registerAs()` called without required type arguments",
+    );
+  });
+
+  test("throws a build error when registerAs() is called with only one type argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.registerAs<IMyService>();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `registerAs()` called without required type arguments",
+    );
+  });
+
+  test("throws a build error when override() is called without type arguments", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.override();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `override()` called without required type arguments",
+    );
+  });
+
+  test("does not throw when the method is on an unrelated class", () => {
+    const code = `
+class EventBus {
+  register(): void {}
+}
+const bus = new EventBus();
+bus.register();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).not.toThrow();
+  });
+
+  test("includes a helpful hint in the error message for single-type-arg methods", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.register();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow("Did you mean `register<T>()`?");
+  });
+
+  test("includes a helpful hint in the error message for two-type-arg methods", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.registerAs();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow("Did you mean `registerAs<Token, Impl>()`?");
+  });
+});
+
 describe("no-op cases", () => {
   test("does not transform when there is no import from the package", () => {
     const code = `
@@ -330,14 +417,13 @@ DiContainer.singleton.registerAs<ILogger, DebugLogger>("logger1");
     expect(result).not.toContain("registerAs<ILogger, DebugLogger>");
   });
 
-  test("does not transform with only one type argument", () => {
+  test("throws a build error with only one type argument", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
 DiContainer.singleton.registerAs<IMyService>();
 `.trim();
 
-    const result = transform(code, "test.ts");
-    expect(result).toBe(code);
+    expect(() => transform(code, "test.ts")).toThrow("`registerAs()` called without required type arguments");
   });
 
   test("does not transform on an unrelated class", () => {
@@ -437,14 +523,13 @@ DiContainer.singleton.override<ILogger, DebugLogger>("logger1");
     expect(result).not.toContain("override<ILogger, DebugLogger>");
   });
 
-  test("does not transform with only one type argument", () => {
+  test("throws a build error with only one type argument", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
 DiContainer.singleton.override<IMyService>();
 `.trim();
 
-    const result = transform(code, "test.ts");
-    expect(result).toBe(code);
+    expect(() => transform(code, "test.ts")).toThrow("`override()` called without required type arguments");
   });
 
   test("does not transform on an unrelated class", () => {

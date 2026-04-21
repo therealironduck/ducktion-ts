@@ -218,21 +218,27 @@ export const transformGenericCalls = (code: string, id: string): string => {
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 
   function visit(node: ts.Node) {
-    if (
-      ts.isCallExpression(node) &&
-      node.typeArguments &&
-      node.typeArguments.length > 0 &&
-      ts.isPropertyAccessExpression(node.expression)
-    ) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const methodName = node.expression.name.text;
       const config = METHOD_REPLACEMENTS[methodName];
       const isValidArgCount = node.arguments.length <= 1;
-      if (config !== undefined && isValidArgCount && node.typeArguments.length >= config.requiredTypeArgs) {
+
+      if (config !== undefined && isValidArgCount) {
         const root = getRootIdentifier(node.expression.expression);
         if (root && diBindings.has(root)) {
+          const typeArgCount = node.typeArguments?.length ?? 0;
+
+          if (typeArgCount < config.requiredTypeArgs) {
+            const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+            throw new Error(
+              `[ducktion-ts] ${id}:${line + 1}:${character + 1}: \`${methodName}()\` called without required type arguments. ` +
+                `Did you mean \`${methodName}<${config.requiredTypeArgs === 1 ? "T" : "Token, Impl"}>()\`?`,
+            );
+          }
+
           const idArgText = node.arguments.length === 1 ? node.arguments[0].getText(sourceFile) : undefined;
           const transformArgs: TransformArgs = {
-            typeArgs: node.typeArguments,
+            typeArgs: node.typeArguments!,
             sourceFile,
             importMap,
             fileId: id,
