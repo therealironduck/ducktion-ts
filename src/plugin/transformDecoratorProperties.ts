@@ -26,6 +26,7 @@ import {
   collectEnumNames,
   collectImportedNames,
   collectInterfaceNames,
+  collectLocalDeclarationNames,
   collectTypeImportMap,
   collectTypeOnlyImports,
 } from "./collectImports";
@@ -33,7 +34,14 @@ import {
 export const transformDecoratorProperties = (code: string, id: string): string => {
   const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
 
-  const importedNames = collectImportedNames(sourceFile);
+  const rawImportedNames = collectImportedNames(sourceFile);
+  if (rawImportedNames.size === 0) return code;
+
+  // Remove any imported names that are shadowed by a top-level local declaration.
+  // A local `function resolve() {}` would shadow `import { resolve } from "..."` and
+  // the decorator would refer to the local one — so we must not transform it.
+  const localDeclarations = collectLocalDeclarationNames(sourceFile);
+  const importedNames = new Set([...rawImportedNames].filter((n) => !localDeclarations.has(n)));
   if (importedNames.size === 0) return code;
 
   const importMap = collectTypeImportMap(sourceFile);

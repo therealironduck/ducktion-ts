@@ -148,6 +148,28 @@ export function collectEnumNames(sourceFile: ts.SourceFile): Set<string> {
 }
 
 /**
+ * Collects identifiers declared at the module top level via `function`, `const`/`let`/`var`,
+ * or `class` statements. Used to detect shadowing of package imports by local declarations.
+ */
+export function collectLocalDeclarationNames(sourceFile: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+
+  for (const statement of sourceFile.statements) {
+    if (ts.isFunctionDeclaration(statement) && statement.name) {
+      names.add(statement.name.text);
+    } else if (ts.isVariableStatement(statement)) {
+      for (const decl of statement.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name)) names.add(decl.name.text);
+      }
+    } else if (ts.isClassDeclaration(statement) && statement.name) {
+      names.add(statement.name.text);
+    }
+  }
+
+  return names;
+}
+
+/**
  * Builds a map from every locally-bound import name to its module specifier.
  * Unlike `collectImportedNames`, this covers ALL imports (not just those from
  * this package), so we can look up where any type argument comes from.
