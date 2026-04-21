@@ -96,7 +96,7 @@ class Consumer {
 });
 
 describe("@resolve() on an interface property", () => {
-  test("rewrites to resolve(token) only — no concrete type — for a type-only import", () => {
+  test("rewrites to resolve(token, undefined) for a type-only import", () => {
     const code = `
 import { resolve } from "${PACKAGE_NAME}";
 import type { IMyService } from "./services/my-service";
@@ -107,11 +107,10 @@ class Consumer {
 `.trim();
 
     const result = transformDecoratorProperties(code, "/project/src/app.ts");
-    expect(result).toContain('resolve("/project/src/services/my-service#IMyService")');
-    expect(result).not.toContain("IMyService)");
+    expect(result).toContain('resolve("/project/src/services/my-service#IMyService", undefined)');
   });
 
-  test("rewrites to resolve(token) only for a local interface", () => {
+  test("rewrites to resolve(token, undefined) for a local interface", () => {
     const code = `
 import { resolve } from "${PACKAGE_NAME}";
 interface IMyService {}
@@ -122,11 +121,10 @@ class Consumer {
 `.trim();
 
     const result = transformDecoratorProperties(code, "test.ts");
-    expect(result).toContain('resolve("test.ts#IMyService")');
-    expect(result).not.toContain("IMyService)");
+    expect(result).toContain('resolve("test.ts#IMyService", undefined)');
   });
 
-  test("rewrites to resolve(token) only for a local enum", () => {
+  test("rewrites to resolve(token, undefined) for a local enum", () => {
     const code = `
 import { resolve } from "${PACKAGE_NAME}";
 enum Direction { Up, Down }
@@ -137,8 +135,53 @@ class Consumer {
 `.trim();
 
     const result = transformDecoratorProperties(code, "test.ts");
-    expect(result).toContain('resolve("test.ts#Direction")');
-    expect(result).not.toContain("Direction)");
+    expect(result).toContain('resolve("test.ts#Direction", undefined)');
+  });
+});
+
+describe("@resolve('id') with an optional id", () => {
+  test("appends the id as a third argument for a concrete class", () => {
+    const code = `
+import { resolve } from "${PACKAGE_NAME}";
+import { MyService } from "./services/my-service";
+class Consumer {
+  @resolve("primary")
+  public dep: MyService;
+}
+`.trim();
+
+    const result = transformDecoratorProperties(code, "/project/src/app.ts");
+    expect(result).toContain('resolve("/project/src/services/my-service#MyService", MyService, "primary")');
+    expect(result).not.toContain('@resolve("primary")');
+  });
+
+  test("appends the id as a third argument for an interface", () => {
+    const code = `
+import { resolve } from "${PACKAGE_NAME}";
+import type { IMyService } from "./services/my-service";
+class Consumer {
+  @resolve("primary")
+  public dep: IMyService;
+}
+`.trim();
+
+    const result = transformDecoratorProperties(code, "/project/src/app.ts");
+    expect(result).toContain('resolve("/project/src/services/my-service#IMyService", undefined, "primary")');
+  });
+
+  test("does not transform when the single argument is not a string literal", () => {
+    const code = `
+import { resolve } from "${PACKAGE_NAME}";
+import { MyService } from "./services/my-service";
+const ID = "primary";
+class Consumer {
+  @resolve(ID)
+  public dep: MyService;
+}
+`.trim();
+
+    const result = transformDecoratorProperties(code, "/project/src/app.ts");
+    expect(result).toBe(code);
   });
 });
 

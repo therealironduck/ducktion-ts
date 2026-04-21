@@ -1,3 +1,4 @@
+import { id } from "./id";
 import { resolve } from "./resolve";
 
-export { resolve };
+export { id, resolve };

@@ -28,7 +28,9 @@ import ts from "typescript";
 import { buildToken } from "./buildToken";
 import {
   collectEnumNames,
+  collectImportedNames,
   collectInterfaceNames,
+  collectLocalDeclarationNames,
   collectTypeImportMap,
   collectTypeOnlyImports,
 } from "./collectImports";
@@ -52,12 +54,44 @@ function isScalarType(typeNode: ts.TypeNode): boolean {
   return false;
 }
 
+/**
+ * Returns the string value of a `@id("foo")` decorator on a constructor parameter,
+ * or undefined if no such decorator is present (or `id` is not imported from our package).
+ */
+function extractIdDecoratorValue(
+  param: ts.ParameterDeclaration,
+  sourceFile: ts.SourceFile,
+  importedNames: Set<string>,
+): string | undefined {
+  const decorators = ts.getDecorators(param);
+  if (!decorators) return undefined;
+
+  for (const decorator of decorators) {
+    if (!ts.isCallExpression(decorator.expression)) continue;
+    const callee = decorator.expression.expression;
+    if (!ts.isIdentifier(callee)) continue;
+    if (callee.text !== "id" || !importedNames.has("id")) continue;
+
+    const args = decorator.expression.arguments;
+    if (args.length !== 1) continue;
+    const arg = args[0];
+    if (!ts.isStringLiteral(arg)) continue;
+    return arg.text;
+  }
+
+  return undefined;
+}
+
 export const transformConstructorDependencies = (code: string, id: string): string => {
   const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
   const importMap = collectTypeImportMap(sourceFile);
   const typeOnlyImports = collectTypeOnlyImports(sourceFile);
   const interfaceNames = collectInterfaceNames(sourceFile);
   const enumNames = collectEnumNames(sourceFile);
+
+  const rawImportedNames = collectImportedNames(sourceFile);
+  const localDeclarations = collectLocalDeclarationNames(sourceFile);
+  const importedNames = new Set([...rawImportedNames].filter((n) => !localDeclarations.has(n)));
 
   const insertions: Array<{ pos: number; text: string }> = [];
 
@@ -76,9 +110,11 @@ export const transformConstructorDependencies = (code: string, id: string): stri
         if (ctor && ctor.parameters.length > 0) {
           const entries = ctor.parameters.map((param) => {
             const name = ts.isIdentifier(param.name) ? param.name.text : "";
+            const paramId = extractIdDecoratorValue(param, sourceFile, importedNames);
 
             if (!param.type || isScalarType(param.type)) {
-              return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(SCALAR_TOKEN)}, concrete: undefined }`;
+              const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
+              return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(SCALAR_TOKEN)}, concrete: undefined${idPart} }`;
             }
 
             const typeName = param.type.getText(sourceFile);
@@ -89,8 +125,9 @@ export const transformConstructorDependencies = (code: string, id: string): stri
               !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
 
             const concrete = isConcrete ? bareTypeName : "undefined";
+            const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
 
-            return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(token)}, concrete: ${concrete} }`;
+            return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(token)}, concrete: ${concrete}${idPart} }`;
           });
 
           insertions.push({

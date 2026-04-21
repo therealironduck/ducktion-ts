@@ -329,7 +329,8 @@ class DiContainer {
 
     // Inject @resolve()-decorated properties
     for (const prop of serviceType.__ducktionResolveProperties ?? []) {
-      instance[prop.propertyKey] = this.innerResolve(prop.token, [...dependencyChain], prop.concrete);
+      const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
+      instance[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
     }
 
     // Call @resolve-decorated methods with their resolved dependencies
@@ -364,18 +365,20 @@ class DiContainer {
    */
   private resolveParameters(dependencies: DucktionDependencies, dependencyChain: string[]): any {
     return dependencies.map((dep: DucktionDependencies[0]): any => {
+      const token = dep.id ? `${dep.token}___${dep.id}` : dep.token;
+
       // If the token is already in the dependencyChain, we have a circular dependency
-      if (dependencyChain.includes(dep.token)) {
+      if (dependencyChain.includes(token)) {
         this.logger?.log(LogLevelEnum.error, `Circular dependency detected for parameter: ${dep.name}`);
         throw new Error(`Circular dependency detected for parameter '${dep.name}'`);
       }
 
       // Add the token to the dependency chain
-      dependencyChain.push(dep.token);
+      dependencyChain.push(token);
 
       // Resolve the parameter. If any error occurs, we wrap it in another error and bubble it up
       try {
-        return this.innerResolve(dep.token, dependencyChain, dep.concrete);
+        return this.innerResolve(token, dependencyChain, dep.concrete);
       } catch (error) {
         throw new Error(`Parameter '${dep.name}' could not be resolved`, { cause: error });
       }

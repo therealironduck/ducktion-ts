@@ -8,15 +8,21 @@
  *   @resolve("/abs/path#SimpleService", SimpleService)
  *   public simple: SimpleService;
  *
+ *   @resolve("my-id")
+ *   public simple: SimpleService;    // with optional id
+ *   →
+ *   @resolve("/abs/path#SimpleService", SimpleService, "my-id")
+ *   public simple: SimpleService;
+ *
  *   @resolve()
  *   public logger: ILogger;          // interface — no runtime value
  *   →
- *   @resolve("/abs/path#ILogger")
+ *   @resolve("/abs/path#ILogger", undefined)
  *   public logger: ILogger;
  *
- * Only `@resolve()` calls with zero arguments that are imported from this
- * package are rewritten; decorated properties that already carry arguments
- * are left untouched.
+ * The plugin always emits 2+ arguments so that `args.length >= 2` reliably
+ * identifies already-transformed calls. Only `@resolve()` / `@resolve("id")`
+ * calls where `resolve` is imported from this package are rewritten.
  */
 
 import ts from "typescript";
@@ -63,8 +69,16 @@ export const transformDecoratorProperties = (code: string, id: string): string =
           if (!ts.isIdentifier(callee)) continue;
           if (callee.text !== "resolve" || !importedNames.has(callee.text)) continue;
 
-          // Skip if the user already provided arguments manually
-          if (decorator.expression.arguments.length > 0) continue;
+          // Skip if already transformed — the plugin always emits 2+ args
+          if (decorator.expression.arguments.length >= 2) continue;
+
+          // Extract the optional user-supplied id from the 1-arg form: @resolve("my-id")
+          let userIdText: string | undefined;
+          if (decorator.expression.arguments.length === 1) {
+            const arg = decorator.expression.arguments[0];
+            if (!ts.isStringLiteral(arg)) continue;
+            userIdText = arg.getText(sourceFile);
+          }
 
           const typeNode = node.type;
           if (!ts.isTypeReferenceNode(typeNode)) continue;
@@ -76,7 +90,10 @@ export const transformDecoratorProperties = (code: string, id: string): string =
           const isConcrete =
             !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
 
-          const args = isConcrete ? `"${token}", ${bareTypeName}` : `"${token}"`;
+          // Always emit 2+ args: concrete type or `undefined` for interfaces
+          const concreteArg = isConcrete ? bareTypeName : "undefined";
+          const baseArgs = `"${token}", ${concreteArg}`;
+          const args = userIdText ? `${baseArgs}, ${userIdText}` : baseArgs;
 
           replacements.push({
             start: decorator.expression.getStart(sourceFile),
