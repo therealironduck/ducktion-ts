@@ -1,5 +1,6 @@
 import { transformAbstractClasses } from "./transformAbstractClasses";
 import { transformConstructorDependencies } from "./transformConstructorDependencies";
+import { transformDecoratorProperties } from "./transformDecoratorProperties";
 import { transformGenericCalls } from "./transformGenericCalls";
 
 /**
@@ -10,10 +11,13 @@ import { transformGenericCalls } from "./transformGenericCalls";
  *     the abstract marker survives compilation.
  *  3. Injects `static __ducktionDependencies = [...]` into non-abstract classes so
  *     constructor parameter types survive compilation as token strings.
+ *  4. Rewrites `@resolve()` decorator calls on class properties so the declared
+ *     type token and concrete constructor survive type erasure.
  */
 export const transform = (code: string, id: string): string => {
   let result = transformGenericCalls(code, id);
   result = transformAbstractClasses(result, id);
   result = transformConstructorDependencies(result, id);
+  result = transformDecoratorProperties(result, id);
   return result;
 };
