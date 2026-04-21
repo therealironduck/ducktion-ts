@@ -39,7 +39,7 @@ class DiContainer {
    * lot of cases both key and value can be the same type. It also contains the singleton instances
    * and other relevant data to resolve the service.
    *
-   * Key format: package#TypeName#id
+   * Key format: package#TypeName___id
    * If ID is null, it will be printed as an empty string
    *
    * By default we register our own logger, so that we can log all events happening.
