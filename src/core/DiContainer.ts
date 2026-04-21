@@ -332,6 +332,11 @@ class DiContainer {
       instance[prop.propertyKey] = this.innerResolve(prop.token, [...dependencyChain], prop.concrete);
     }
 
+    // Call @resolve-decorated methods with their resolved dependencies
+    for (const method of serviceType.__ducktionResolveMethods ?? []) {
+      instance[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain]));
+    }
+
     let isAutoResolved = false;
     if (!definition) {
       definition = new ServiceDefinition(serviceType);

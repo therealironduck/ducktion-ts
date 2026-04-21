@@ -1,7 +1,12 @@
 import { expect } from "vitest";
 
-import { test } from "../../base";
-import { ServiceWithPublicDecorator } from "../../stubs/DecoratorServices";
+import { LogLevelEnum } from "../../../src";
+import { fakeLogger, test } from "../../base";
+import {
+  ServiceWithPrivateAndProtectedDecorator,
+  ServiceWithPublicDecorator,
+  ServiceWithResolveMethod,
+} from "../../stubs/DecoratorServices";
 import SimpleService, { SecondSimpleService } from "../../stubs/SimpleService";
 
 test("it resolves any public field with a resolve decorator when resolving the main service", ({ container }) => {
@@ -17,58 +22,37 @@ test("it resolves any public field with a resolve decorator when resolving the m
   expect(servicePub.simple).toBeInstanceOf(SimpleService);
 });
 
+test("it resolves private and protected fields aswell", ({ container }) => {
+  container.__registerAs("SimpleService", SimpleService);
+  container.__registerAs("SecondSimpleService", SecondSimpleService);
+  container.__registerAs("ServiceWithPrivateAndProtectedDecorator", ServiceWithPrivateAndProtectedDecorator);
+
+  const service = container.__resolveByToken("ServiceWithPrivateAndProtectedDecorator");
+  expect(service).toBeInstanceOf(ServiceWithPrivateAndProtectedDecorator);
+
+  const servicePub = service as ServiceWithPrivateAndProtectedDecorator;
+  expect(servicePub.gAnother).toBeInstanceOf(SecondSimpleService);
+  expect(servicePub.gSimple).toBeInstanceOf(SimpleService);
+});
+
+test("it can resolve and call whole public methods that have the decorator", ({ container }) => {
+  const logger = fakeLogger(container);
+
+  container.__registerAs("SimpleService", SimpleService);
+  container.__registerAs("SecondSimpleService", SecondSimpleService);
+  container.__registerAs("ServiceWithResolveMethod", ServiceWithResolveMethod);
+
+  const service = container.__resolveByToken("ServiceWithResolveMethod");
+  expect(service).toBeInstanceOf(ServiceWithResolveMethod);
+
+  const serviceRes = service as ServiceWithResolveMethod;
+  expect(serviceRes.simple).toBeInstanceOf(SimpleService);
+  expect(serviceRes.another).toBeInstanceOf(SecondSimpleService);
+
+  logger.assertHasMessage(LogLevelEnum.debug, "I was called!");
+});
+
 /**
-        
-        [Test]
-        public void ItResolvesPrivateAndProtectedFieldsAsWell()
-        {
-            // Register registered services
-            container.Register<SimpleService>();
-            container.Register<AnotherService>();
-            container.Register<ServiceWithPrivateAndProtectedAttribute>();
-            
-            // Resolve the main service
-            var service = container.Resolve<ServiceWithPrivateAndProtectedAttribute>();
-            
-            // Ensure that both the resolve attribute and the constructor parameter are resolved
-            Assert.NotNull(service.Simple);
-            Assert.NotNull(service.AnotherService);
-        }
-        
-        [Test]
-        public void ItResolvesProperties()
-        {
-            // Register registered services
-            container.Register<SimpleService>();
-            container.Register<ServiceWithProperty>();
-            
-            // Resolve the main service
-            var service = container.Resolve<ServiceWithProperty>();
-            
-            // Ensure that both the resolve attribute and the constructor parameter are resolved
-            Assert.NotNull(service.Simple);
-        }
-        
-        [Test]
-        public void ItCanResolveAndCallWholePublicMethodsOfHaveThatAttribute()
-        {
-            var logger = FakeLogger();
-            
-            // Register registered services
-            container.Register<SimpleService>();
-            container.Register<AnotherService>();
-            container.Register<ServiceWithResolveMethod>();
-            
-            // Resolve the main service
-            var service = container.Resolve<ServiceWithResolveMethod>();
-            
-            // Ensure that both the resolve attribute and the constructor parameter are resolved
-            Assert.NotNull(service.Simple);
-            Assert.NotNull(service.Another);
-            
-            // Ensure that the method was called
-            logger.AssertHasMessage(LogLevel.Debug, "I was called!");
-        }
         
         [Test]
         public void ItCanResolveAndCallWholePrivateMethodsOfHaveThatAttribute()
