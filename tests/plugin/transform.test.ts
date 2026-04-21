@@ -81,6 +81,18 @@ bus.register<IMyService>();
     expect(result).toBe(code);
   });
 
+  test("forwards string id argument to __registerAs", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import { MyService } from "./services/my-service";
+DiContainer.singleton.register<MyService>("svc1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__registerAs("/project/src/services/my-service#MyService", MyService, "svc1")');
+    expect(result).not.toContain("register<MyService>");
+  });
+
   test("does not transform on an unrelated class in a file that also imports the package", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
@@ -161,156 +173,116 @@ DiContainer.singleton.resolve<${scalarType}>();
       expect(result).not.toContain(`resolve<${scalarType}>`);
     },
   );
-});
 
-describe("register<T>() with a callback", () => {
-  test("forwards an arrow function callback as the third argument", () => {
+  test("forwards string id argument to __resolveWithType for concrete class", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-import { MyService } from "./my-service";
-DiContainer.singleton.register<MyService>(() => new MyService(42));
+import { MyService } from "./services/my-service";
+DiContainer.singleton.resolve<MyService>("svc1");
 `.trim();
 
     const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain('__registerAs("/project/src/my-service#MyService", MyService, () => new MyService(42))');
-    expect(result).not.toContain("register<MyService>");
+    expect(result).toContain('__resolveWithType("/project/src/services/my-service#MyService", MyService, "svc1")');
+    expect(result).not.toContain("resolve<MyService>");
   });
 
-  test("forwards a named function reference as the third argument", () => {
+  test("forwards string id argument to __resolveByToken for interface", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-import { MyService } from "./my-service";
-const factory = () => new MyService(1);
-DiContainer.singleton.register<MyService>(factory);
+import type { IMyService } from "./services/my-service";
+DiContainer.singleton.resolve<IMyService>("svc1");
 `.trim();
 
     const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain('__registerAs("/project/src/my-service#MyService", MyService, factory)');
-  });
-
-  test("does not transform when more than one argument is given", () => {
-    const code = `
-import DiContainer from "${PACKAGE_NAME}";
-import { MyService } from "./my-service";
-DiContainer.singleton.register<MyService>(() => new MyService(), extraArg);
-`.trim();
-
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).not.toContain("__registerAs");
+    expect(result).toContain('__resolveByToken("/project/src/services/my-service#IMyService", "svc1")');
+    expect(result).not.toContain("resolve<IMyService>");
   });
 });
 
-describe("registerAs<T, T2>() with a callback", () => {
-  test("forwards an arrow function callback as the third argument", () => {
+describe("build errors for missing type arguments", () => {
+  test("throws a build error when register() is called without type arguments", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-import type { ILogger } from "./logger";
-import { DebugLogger } from "./debug-logger";
-DiContainer.singleton.registerAs<ILogger, DebugLogger>(() => new DebugLogger("verbose"));
+DiContainer.singleton.register();
 `.trim();
 
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain(
-      '__registerAs("/project/src/logger#ILogger", DebugLogger, () => new DebugLogger("verbose"))',
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `register()` called without required type arguments",
     );
-    expect(result).not.toContain("registerAs<ILogger, DebugLogger>");
   });
 
-  test("forwards a named function reference as the third argument", () => {
+  test("throws a build error when resolve() is called without type arguments", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-import type { ILogger } from "./logger";
-import { DebugLogger } from "./debug-logger";
-const factory = () => new DebugLogger();
-DiContainer.singleton.registerAs<ILogger, DebugLogger>(factory);
+DiContainer.singleton.resolve();
 `.trim();
 
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain('__registerAs("/project/src/logger#ILogger", DebugLogger, factory)');
-  });
-
-  test("does not transform when more than one argument is given", () => {
-    const code = `
-import DiContainer from "${PACKAGE_NAME}";
-import type { ILogger } from "./logger";
-import { DebugLogger } from "./debug-logger";
-DiContainer.singleton.registerAs<ILogger, DebugLogger>(() => new DebugLogger(), extraArg);
-`.trim();
-
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).not.toContain("__registerAs");
-  });
-});
-
-describe("override<T, T2>() with a callback", () => {
-  test("forwards an arrow function callback as the third argument", () => {
-    const code = `
-import DiContainer from "${PACKAGE_NAME}";
-import type { ILogger } from "./logger";
-import { DebugLogger } from "./debug-logger";
-DiContainer.singleton.override<ILogger, DebugLogger>(() => new DebugLogger("verbose"));
-`.trim();
-
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain(
-      '__override("/project/src/logger#ILogger", DebugLogger, () => new DebugLogger("verbose"))',
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `resolve()` called without required type arguments",
     );
-    expect(result).not.toContain("override<ILogger, DebugLogger>");
   });
 
-  test("forwards a named function reference as the third argument", () => {
+  test("throws a build error when registerAs() is called without type arguments", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-import type { ILogger } from "./logger";
-import { DebugLogger } from "./debug-logger";
-const factory = () => new DebugLogger();
-DiContainer.singleton.override<ILogger, DebugLogger>(factory);
+DiContainer.singleton.registerAs();
 `.trim();
 
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain('__override("/project/src/logger#ILogger", DebugLogger, factory)');
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `registerAs()` called without required type arguments",
+    );
   });
 
-  test("does not transform when more than one argument is given", () => {
+  test("throws a build error when registerAs() is called with only one type argument", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-import type { ILogger } from "./logger";
-import { DebugLogger } from "./debug-logger";
-DiContainer.singleton.override<ILogger, DebugLogger>(() => new DebugLogger(), extraArg);
+DiContainer.singleton.registerAs<IMyService>();
 `.trim();
 
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).not.toContain("__override");
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `registerAs()` called without required type arguments",
+    );
   });
-});
 
-describe("resolve<T>() with a callback", () => {
-  test("does not transform when an argument is given", () => {
+  test("throws a build error when override() is called without type arguments", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-import { MyService } from "./my-service";
-DiContainer.singleton.resolve<MyService>(someArg);
+DiContainer.singleton.override();
 `.trim();
 
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).not.toContain("__resolveByToken");
-    expect(result).not.toContain("__resolveWithType");
+    expect(() => transform(code, "test.ts")).toThrow(
+      "[ducktion-ts] test.ts:2:1: `override()` called without required type arguments",
+    );
   });
-});
 
-describe("register<T>() and resolve<T>() together", () => {
-  test("transforms both in the same file", () => {
+  test("does not throw when the method is on an unrelated class", () => {
     const code = `
-import DiContainer from "${PACKAGE_NAME}";
-import { MyService } from "./my-service";
-const container = DiContainer.singleton;
-container.register<MyService>();
-const svc = container.resolve<MyService>();
+class EventBus {
+  register(): void {}
+}
+const bus = new EventBus();
+bus.register();
 `.trim();
 
-    const result = transform(code, "/project/src/app.ts");
-    expect(result).toContain('__registerAs("/project/src/my-service#MyService", MyService)');
-    expect(result).toContain('__resolveWithType("/project/src/my-service#MyService", MyService)');
+    expect(() => transform(code, "test.ts")).not.toThrow();
+  });
+
+  test("includes a helpful hint in the error message for single-type-arg methods", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.register();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow("Did you mean `register<T>()`?");
+  });
+
+  test("includes a helpful hint in the error message for two-type-arg methods", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+DiContainer.singleton.registerAs();
+`.trim();
+
+    expect(() => transform(code, "test.ts")).toThrow("Did you mean `registerAs<Token, Impl>()`?");
   });
 });
 
@@ -432,14 +404,26 @@ DiContainer.singleton.registerAs<IDirection, Direction>();
     expect(result).not.toContain("registerAs<IDirection, Direction>");
   });
 
-  test("does not transform with only one type argument", () => {
+  test("forwards string id argument to __registerAs", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./services/logger";
+import { DebugLogger } from "./services/debug-logger";
+DiContainer.singleton.registerAs<ILogger, DebugLogger>("logger1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__registerAs("/project/src/services/logger#ILogger", DebugLogger, "logger1")');
+    expect(result).not.toContain("registerAs<ILogger, DebugLogger>");
+  });
+
+  test("throws a build error with only one type argument", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
 DiContainer.singleton.registerAs<IMyService>();
 `.trim();
 
-    const result = transform(code, "test.ts");
-    expect(result).toBe(code);
+    expect(() => transform(code, "test.ts")).toThrow("`registerAs()` called without required type arguments");
   });
 
   test("does not transform on an unrelated class", () => {
@@ -526,14 +510,26 @@ DiContainer.singleton.override<IDirection, Direction>();
     expect(result).not.toContain("override<IDirection, Direction>");
   });
 
-  test("does not transform with only one type argument", () => {
+  test("forwards string id argument to __override", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./services/logger";
+import { DebugLogger } from "./services/debug-logger";
+DiContainer.singleton.override<ILogger, DebugLogger>("logger1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__override("/project/src/services/logger#ILogger", DebugLogger, "logger1")');
+    expect(result).not.toContain("override<ILogger, DebugLogger>");
+  });
+
+  test("throws a build error with only one type argument", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
 DiContainer.singleton.override<IMyService>();
 `.trim();
 
-    const result = transform(code, "test.ts");
-    expect(result).toBe(code);
+    expect(() => transform(code, "test.ts")).toThrow("`override()` called without required type arguments");
   });
 
   test("does not transform on an unrelated class", () => {

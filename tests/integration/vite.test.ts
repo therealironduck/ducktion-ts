@@ -62,6 +62,27 @@ test("it does not replace `register<T>()` calls on unrelated classes", async () 
   expect(code).not.toContain("register(IMyInterface)");
 });
 
+test("it propagates a build error when a DI method is called without type arguments", async () => {
+  await expect(
+    build({
+      plugins: [plugin()],
+      resolve: { alias },
+      logLevel: "silent",
+      build: {
+        write: false,
+        minify: false,
+        lib: {
+          entry: "./tests/stubs/missing-type-arg.ts",
+          formats: ["es"],
+        },
+        rollupOptions: {
+          treeshake: false,
+        },
+      },
+    }),
+  ).rejects.toThrow("`register()` called without required type arguments");
+});
+
 test("it only replaces `register<T>()` on DiContainer, not on unrelated classes in the same file", async () => {
   const result = await build({
     plugins: [plugin()],

@@ -46,7 +46,10 @@ test("it can change the default singleton mode to non singleton", ({ container }
 });
 
 test("it can register callback based services as non singleton", ({ container }) => {
-  container.__registerAs("SimpleService", SimpleService, () => new SimpleService()).transient();
+  container
+    .__registerAs("SimpleService", SimpleService)
+    .setCallback(() => new SimpleService())
+    .transient();
 
   const service1 = container.__resolveByToken("SimpleService");
   const service2 = container.__resolveByToken("SimpleService");
@@ -57,7 +60,7 @@ test("it can register callback based services as non singleton", ({ container })
 test("it can register callback based services as non singleton with container defaults", ({ container }) => {
   container.configure({ newDefaultSingletonMode: "non-singleton" });
 
-  container.__registerAs("SimpleService", SimpleService, () => new SimpleService());
+  container.__registerAs("SimpleService", SimpleService).setCallback(() => new SimpleService());
 
   const service1 = container.__resolveByToken("SimpleService");
   const service2 = container.__resolveByToken("SimpleService");

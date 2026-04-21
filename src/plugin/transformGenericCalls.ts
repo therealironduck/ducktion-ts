@@ -51,14 +51,14 @@ type TransformArgs = {
   typeOnlyImports: Set<string>;
   interfaceNames: Set<string>;
   enumNames: Set<string>;
+  /** Raw text of the optional id argument, e.g. `"service1"`. Undefined when omitted. */
+  idArgText?: string;
 };
 
 type MethodConfig = {
   replacementName: string;
   /** Minimum number of type arguments required; calls with fewer are skipped. */
   requiredTypeArgs: number;
-  /** When true, an optional single callback argument is forwarded to the runtime method. */
-  allowCallback?: boolean;
   /**
    * When provided, called before buildArgs. Return a non-null error message to
    * replace the entire call expression with a runtime throw instead of the
@@ -131,15 +131,15 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   register: {
     replacementName: "__registerAs",
     requiredTypeArgs: 1,
-    allowCallback: true,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
       return validateInstantiableType(typeName, "register", true, { typeOnlyImports, interfaceNames, enumNames });
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
+    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, idArgText }) => {
       const typeName = typeArgs[0].getText(sourceFile);
       const token = buildToken(typeName, importMap, fileId);
-      return `"${token}", ${typeName}`;
+      const base = `"${token}", ${typeName}`;
+      return idArgText ? `${base}, ${idArgText}` : base;
     },
   },
   resolve: {
@@ -153,21 +153,21 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
       }
       return "__resolveWithType";
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, typeOnlyImports, interfaceNames, enumNames }) => {
-      if (isScalarTypeArg(typeArgs[0])) return `"${SCALAR_TOKEN}"`;
+    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, typeOnlyImports, interfaceNames, enumNames, idArgText }) => {
+      if (isScalarTypeArg(typeArgs[0])) return idArgText ? `"${SCALAR_TOKEN}", ${idArgText}` : `"${SCALAR_TOKEN}"`;
       const typeName = typeArgs[0].getText(sourceFile);
       const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
       const token = buildToken(typeName, importMap, fileId);
       if (typeOnlyImports.has(bareTypeName) || interfaceNames.has(bareTypeName) || enumNames.has(bareTypeName)) {
-        return `"${token}"`;
+        return idArgText ? `"${token}", ${idArgText}` : `"${token}"`;
       }
-      return `"${token}", ${typeName}`;
+      const base = `"${token}", ${typeName}`;
+      return idArgText ? `${base}, ${idArgText}` : base;
     },
   },
   registerAs: {
     replacementName: "__registerAs",
     requiredTypeArgs: 2,
-    allowCallback: true,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
       return validateInstantiableType(implTypeName, "registerAs", false, {
@@ -176,26 +176,27 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
         enumNames,
       });
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
+    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, idArgText }) => {
       const tokenTypeName = typeArgs[0].getText(sourceFile);
       const implTypeName = typeArgs[1].getText(sourceFile);
       const token = buildToken(tokenTypeName, importMap, fileId);
-      return `"${token}", ${implTypeName}`;
+      const base = `"${token}", ${implTypeName}`;
+      return idArgText ? `${base}, ${idArgText}` : base;
     },
   },
   override: {
     replacementName: "__override",
     requiredTypeArgs: 2,
-    allowCallback: true,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
       const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
       return validateInstantiableType(implTypeName, "override", false, { typeOnlyImports, interfaceNames, enumNames });
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId }) => {
+    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, idArgText }) => {
       const tokenTypeName = typeArgs[0].getText(sourceFile);
       const implTypeName = typeArgs[1].getText(sourceFile);
       const token = buildToken(tokenTypeName, importMap, fileId);
-      return `"${token}", ${implTypeName}`;
+      const base = `"${token}", ${implTypeName}`;
+      return idArgText ? `${base}, ${idArgText}` : base;
     },
   },
 };
@@ -217,27 +218,34 @@ export const transformGenericCalls = (code: string, id: string): string => {
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 
   function visit(node: ts.Node) {
-    if (
-      ts.isCallExpression(node) &&
-      node.typeArguments &&
-      node.typeArguments.length > 0 &&
-      ts.isPropertyAccessExpression(node.expression)
-    ) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const methodName = node.expression.name.text;
       const config = METHOD_REPLACEMENTS[methodName];
-      const hasCallback = node.arguments.length === 1 && (config?.allowCallback ?? false);
-      const isValidArgCount = node.arguments.length === 0 || hasCallback;
-      if (config !== undefined && isValidArgCount && node.typeArguments.length >= config.requiredTypeArgs) {
+      const isValidArgCount = node.arguments.length <= 1;
+
+      if (config !== undefined && isValidArgCount) {
         const root = getRootIdentifier(node.expression.expression);
         if (root && diBindings.has(root)) {
+          const typeArgCount = node.typeArguments?.length ?? 0;
+
+          if (typeArgCount < config.requiredTypeArgs) {
+            const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+            throw new Error(
+              `[ducktion-ts] ${id}:${line + 1}:${character + 1}: \`${methodName}()\` called without required type arguments. ` +
+                `Did you mean \`${methodName}<${config.requiredTypeArgs === 1 ? "T" : "Token, Impl"}>()\`?`,
+            );
+          }
+
+          const idArgText = node.arguments.length === 1 ? node.arguments[0].getText(sourceFile) : undefined;
           const transformArgs: TransformArgs = {
-            typeArgs: node.typeArguments,
+            typeArgs: node.typeArguments!,
             sourceFile,
             importMap,
             fileId: id,
             typeOnlyImports,
             interfaceNames,
             enumNames,
+            idArgText,
           };
 
           const runtimeError = config.buildRuntimeError?.(transformArgs) ?? null;
@@ -249,11 +257,10 @@ export const transformGenericCalls = (code: string, id: string): string => {
             });
           } else {
             const replacementName = config.buildReplacementName?.(transformArgs) ?? config.replacementName;
-            const callbackArg = hasCallback ? `, ${node.arguments[0].getText(sourceFile)}` : "";
             replacements.push({
               start: node.expression.name.getStart(sourceFile),
               end: node.end,
-              text: `${replacementName}(${config.buildArgs(transformArgs)}${callbackArg})`,
+              text: `${replacementName}(${config.buildArgs(transformArgs)})`,
             });
           }
         }

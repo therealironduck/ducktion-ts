@@ -10,7 +10,7 @@ test("it can bind callbacks which get used to resolve", ({ container }) => {
     return new ScalarService(123);
   };
 
-  container.__registerAs("ScalarService", ScalarService, action);
+  container.__registerAs("ScalarService", ScalarService).setCallback(action);
   expect(called).toBeFalsy();
 
   const service = container.__resolveByToken("ScalarService");
@@ -25,7 +25,7 @@ test("it can override callbacks without existing instances", ({ container }) => 
   const action = () => new ScalarService(123);
   container.__registerAs("ScalarService", ScalarService);
 
-  container.__override("ScalarService", ScalarService, action);
+  container.__override("ScalarService", ScalarService).setCallback(action);
 
   const service = container.__resolveByToken("ScalarService");
   const scalarService = service as ScalarService;
@@ -39,7 +39,7 @@ test("it can override callbacks with existing instance", ({ container }) => {
 
   container.__registerAs("ScalarService", ScalarService).setInstance(existing);
 
-  container.__override("ScalarService", ScalarService, action);
+  container.__override("ScalarService", ScalarService).setCallback(action);
 
   const service = container.__resolveByToken("ScalarService");
   const scalarService = service as ScalarService;
@@ -56,7 +56,7 @@ test("it stores the callback results as singletons by default", ({ container }) 
     return service;
   };
 
-  container.__registerAs("ScalarService", ScalarService, action);
+  container.__registerAs("ScalarService", ScalarService).setCallback(action);
 
   const service1 = container.__resolveByToken("ScalarService");
   expect(calledCount).toBe(1);
