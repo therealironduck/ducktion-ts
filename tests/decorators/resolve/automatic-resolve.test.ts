@@ -5,6 +5,7 @@ import { fakeLogger, test } from "../../base";
 import {
   ServiceWithIdConstructorArgument,
   ServiceWithIdFields,
+  ServiceWithIdMethodParameters,
   ServiceWithPrivateAndProtectedDecorator,
   ServiceWithPrivateResolveMethod,
   ServiceWithPublicDecorator,
@@ -114,30 +115,21 @@ describe("usage with ids", () => {
     expect(service.simple).toBe(simple2);
     expect(service.another).toBe(another);
   });
-});
-/**
-        [Test]
-        public void ItCanSpecifyIdsInMethodParameters()
-        {
-            var simple1 = new SimpleService();
-            var simple2 = new SimpleService();
-            
-            // Register registered services
-            container.Register<SimpleService>(simple1);
-            container.Register<SimpleService>(simple2, "simple");
-            
-            container.Register<AnotherService>();
-            
-            container.Register<ServiceWithIdMethodParameters>();
-            
-            // Resolve the main service
-            var service = container.Resolve<ServiceWithIdMethodParameters>();
-            
-            // Ensure that both the resolve attribute and the constructor parameter are resolved
-            Assert.AreEqual(service.Simple, simple2);
-            Assert.NotNull(service.Another);
-        }
-    }
 
-	TODO: e2e tests
-	*/
+  test("it resolves the id-qualified method parameters when @id is used", ({ container }) => {
+    const simple1 = new SimpleService();
+    const simple2 = new SimpleService();
+
+    const another = new SecondSimpleService();
+
+    container.__registerAs("SimpleService", SimpleService).setInstance(simple1);
+    container.__registerAs("SimpleService", SimpleService, "simple").setInstance(simple2);
+    container.__registerAs("SecondSimpleService", SecondSimpleService).setInstance(another);
+    container.__registerAs("ServiceWithIdMethodParameters", ServiceWithIdMethodParameters);
+
+    const service = container.__resolveByToken("ServiceWithIdMethodParameters") as ServiceWithIdMethodParameters;
+    expect(service).toBeInstanceOf(ServiceWithIdMethodParameters);
+    expect(service.simple).toBe(simple2);
+    expect(service.another).toBe(another);
+  });
+});

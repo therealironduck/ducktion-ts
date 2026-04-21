@@ -10,6 +10,16 @@ export function resolve(): (target: any, propertyKey: string) => void;
 /** Resolves the dependency by type and id, using the property's type annotation as the token. */
 export function resolve(id: string): (target: any, propertyKey: string) => void;
 
+/** Plugin-transformed form: resolve("token", ConcreteType) — emitted by the build plugin, not called by users directly. */
+export function resolve(token: string, concrete: any): (target: any, propertyKey: string) => void;
+
+/** Plugin-transformed form: resolve("token", ConcreteType, "id" | undefined) — emitted by the build plugin, not called by users directly. */
+export function resolve(
+  token: string,
+  concrete: any,
+  id: string | undefined,
+): (target: any, propertyKey: string) => void;
+
 /** Applied as a bare `@resolve` on a method — the plugin injects the method into `__ducktionResolveMethods` so the container calls it with resolved arguments after instantiation. */
 export function resolve(target: any, propertyKey: string, descriptor: PropertyDescriptor): void;
 

@@ -109,3 +109,25 @@ export class ServiceWithIdConstructorArgument {
     this.another = another;
   }
 }
+
+export class ServiceWithIdMethodParameters {
+  // Pre-transformed: @resolve on hello → __ducktionResolveMethods injection
+  static __ducktionResolveMethods = [
+    {
+      methodKey: "hello",
+      dependencies: [
+        { name: "simple", token: "SimpleService", concrete: SimpleService, id: "simple" },
+        { name: "another", token: "SecondSimpleService", concrete: SecondSimpleService },
+      ],
+    },
+  ];
+
+  public simple!: SimpleService;
+  public another!: SecondSimpleService;
+
+  @resolve
+  public hello(@id("simple") simple: SimpleService, another: SecondSimpleService) {
+    this.simple = simple;
+    this.another = another;
+  }
+}
