@@ -81,6 +81,18 @@ bus.register<IMyService>();
     expect(result).toBe(code);
   });
 
+  test("forwards string id argument to __registerAs", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import { MyService } from "./services/my-service";
+DiContainer.singleton.register<MyService>("svc1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__registerAs("/project/src/services/my-service#MyService", MyService, "svc1")');
+    expect(result).not.toContain("register<MyService>");
+  });
+
   test("does not transform on an unrelated class in a file that also imports the package", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
@@ -161,6 +173,30 @@ DiContainer.singleton.resolve<${scalarType}>();
       expect(result).not.toContain(`resolve<${scalarType}>`);
     },
   );
+
+  test("forwards string id argument to __resolveWithType for concrete class", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import { MyService } from "./services/my-service";
+DiContainer.singleton.resolve<MyService>("svc1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__resolveWithType("/project/src/services/my-service#MyService", MyService, "svc1")');
+    expect(result).not.toContain("resolve<MyService>");
+  });
+
+  test("forwards string id argument to __resolveByToken for interface", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { IMyService } from "./services/my-service";
+DiContainer.singleton.resolve<IMyService>("svc1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__resolveByToken("/project/src/services/my-service#IMyService", "svc1")');
+    expect(result).not.toContain("resolve<IMyService>");
+  });
 });
 
 describe("no-op cases", () => {
@@ -281,6 +317,19 @@ DiContainer.singleton.registerAs<IDirection, Direction>();
     expect(result).not.toContain("registerAs<IDirection, Direction>");
   });
 
+  test("forwards string id argument to __registerAs", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./services/logger";
+import { DebugLogger } from "./services/debug-logger";
+DiContainer.singleton.registerAs<ILogger, DebugLogger>("logger1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__registerAs("/project/src/services/logger#ILogger", DebugLogger, "logger1")');
+    expect(result).not.toContain("registerAs<ILogger, DebugLogger>");
+  });
+
   test("does not transform with only one type argument", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
@@ -373,6 +422,19 @@ DiContainer.singleton.override<IDirection, Direction>();
     expect(result).toContain("throw new Error");
     expect(result).toContain("Enums are not instantiable classes and cannot be registered as services.");
     expect(result).not.toContain("override<IDirection, Direction>");
+  });
+
+  test("forwards string id argument to __override", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./services/logger";
+import { DebugLogger } from "./services/debug-logger";
+DiContainer.singleton.override<ILogger, DebugLogger>("logger1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__override("/project/src/services/logger#ILogger", DebugLogger, "logger1")');
+    expect(result).not.toContain("override<ILogger, DebugLogger>");
   });
 
   test("does not transform with only one type argument", () => {

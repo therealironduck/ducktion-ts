@@ -1,99 +1,53 @@
-import { test } from "../base";
-// import SimpleService from "../stubs/SimpleService";
+import { describe, expect } from "vitest";
 
-test("it can register the same service with different ids", () => {
-  // container.__registerAs("ISimpleService", SimpleService, )
+import { test } from "../base";
+import SimpleService, { SecondSimpleService } from "../stubs/SimpleService";
+
+describe("register", () => {
+  test("it can register the same service with different ids", ({ container }) => {
+    container.__registerAs("ISimpleService", SimpleService, "service1");
+    container.__registerAs("ISimpleService", SecondSimpleService, "service2");
+
+    expect(container.__resolveByToken("ISimpleService", "service1")).toBeInstanceOf(SimpleService);
+    expect(container.__resolveByToken("ISimpleService", "service2")).toBeInstanceOf(SecondSimpleService);
+  });
+
+  test("it throws an error if a service with the same id is required twice", ({ container }) => {
+    container.__registerAs("ISimpleService", SimpleService, "service1");
+
+    expect(() => container.__registerAs("ISimpleService", SecondSimpleService, "service1")).toThrow(
+      "Service is already registered.",
+    );
+  });
+
+  test("it works with the concrete type given", ({ container }) => {
+    container.__registerAs("ISimpleService", SimpleService, "service1");
+    container.__registerAs("ISimpleService", SecondSimpleService, "service2");
+
+    expect(container.__resolveWithType("ISimpleService", SimpleService, "service1")).toBeInstanceOf(SimpleService);
+    expect(container.__resolveWithType("ISimpleService", SecondSimpleService, "service2")).toBeInstanceOf(
+      SecondSimpleService,
+    );
+  });
+
+  test("it can mix the same service with and without id", ({ container }) => {
+    container.__registerAs("ISimpleService", SimpleService);
+    container.__registerAs("ISimpleService", SecondSimpleService, "with-id");
+
+    expect(container.__resolveByToken("ISimpleService")).toBeInstanceOf(SimpleService);
+    expect(container.__resolveByToken("ISimpleService", "with-id")).toBeInstanceOf(SecondSimpleService);
+  });
+});
+
+describe("override", () => {
+  test("it can override services with ids", ({ container }) => {
+    container.__registerAs("ISimpleService", SimpleService, "service123");
+    container.__override("ISimpleService", SecondSimpleService, "service123");
+
+    expect(container.__resolveByToken("ISimpleService", "service123")).toBeInstanceOf(SecondSimpleService);
+  });
 });
 
 /**
-        [Test]
-        public void ItCanRegisterTheSameServiceWithDifferentIds()
-        {
-            container.Register<ISimpleInterface, SimpleService>("service1");
-            container.Register<ISimpleInterface, SecondSimpleService>("service2");
-
-            Assert.That(container.Resolve<ISimpleInterface>("service1"), Is.InstanceOf<SimpleService>());
-            Assert.That(container.Resolve<ISimpleInterface>("service2"), Is.InstanceOf<SecondSimpleService>());
-        }
-
-        [Test]
-        public void ItThrowsAnErrorIfAServiceWithTheSameIdIsRegisteredTwice()
-        {
-            container.Register<ISimpleInterface, SimpleService>("service1");
-
-            var error = Assert.Throws<DependencyRegisterException>(() =>
-            {
-                container.Register<ISimpleInterface, SecondSimpleService>("service1");
-            });
-
-            Assert.That(error.Message, Does.Contain("Service is already registered"));
-        }
-
-        [Test]
-        public void ItWorksWithEveryRegisterMethodSyntax()
-        {
-            container.Register(typeof(ISimpleInterface), typeof(SimpleService), "id1");
-            Assert.That(container.Resolve<ISimpleInterface>("id1"), Is.InstanceOf<SimpleService>());
-
-            container.Register(typeof(SimpleService), "id2");
-            Assert.That(container.Resolve<SimpleService>("id2"), Is.InstanceOf<SimpleService>());
-
-            container.Register<SimpleService>("id3");
-            Assert.That(container.Resolve<SimpleService>("id3"), Is.InstanceOf<SimpleService>());
-
-            container.Register<ISimpleInterface, SimpleService>("id4");
-            Assert.That(container.Resolve<ISimpleInterface>("id4"), Is.InstanceOf<SimpleService>());
-
-            container.Register(typeof(ISimpleInterface), new SimpleService(), "id5");
-            Assert.That(container.Resolve<ISimpleInterface>("id5"), Is.InstanceOf<SimpleService>());
-
-            container.Register<ISimpleInterface>(new SimpleService(), "id6");
-            Assert.That(container.Resolve<ISimpleInterface>("id6"), Is.InstanceOf<SimpleService>());
-
-            container.Register(typeof(ISimpleInterface), new Func<ISimpleInterface>(() => new SimpleService()), "id7");
-            Assert.That(container.Resolve<ISimpleInterface>("id7"), Is.InstanceOf<SimpleService>());
-
-            container.Register<ISimpleInterface>(new Func<ISimpleInterface>(() => new SimpleService()), "id8");
-            Assert.That(container.Resolve<ISimpleInterface>("id8"), Is.InstanceOf<SimpleService>());
-        }
-
-        [Test]
-        public void ItCanOverrideServicesWithIds()
-        {
-            container.Register<ISimpleInterface, SimpleService>(id: "service123");
-
-            container.Override(typeof(ISimpleInterface), typeof(SecondSimpleService), id: "service123");
-
-            Assert.That(container.Resolve<ISimpleInterface>("service123"), Is.InstanceOf<SecondSimpleService>());
-        }
-
-        [Test]
-        public void ItWorksWithEveryOverrideMethodSyntax()
-        {
-            container.Register<ISimpleInterface, SimpleService>(id: "id1");
-            container.Override(typeof(ISimpleInterface), typeof(SecondSimpleService), id: "id1");
-            Assert.That(container.Resolve<ISimpleInterface>("id1"), Is.InstanceOf<SecondSimpleService>());
-
-            container.Register<ISimpleInterface, SimpleService>(id: "id2");
-            container.Override<ISimpleInterface, SecondSimpleService>(id: "id2");
-            Assert.That(container.Resolve<ISimpleInterface>("id2"), Is.InstanceOf<SecondSimpleService>());
-
-            container.Register<ISimpleInterface, SimpleService>(id: "id3");
-            container.Override(typeof(ISimpleInterface), new SecondSimpleService(), id: "id3");
-            Assert.That(container.Resolve<ISimpleInterface>("id3"), Is.InstanceOf<SecondSimpleService>());
-
-            container.Register<ISimpleInterface, SimpleService>(id: "id4");
-            container.Override<ISimpleInterface>(new SecondSimpleService(), id: "id4");
-            Assert.That(container.Resolve<ISimpleInterface>("id4"), Is.InstanceOf<SecondSimpleService>());
-
-            container.Register<ISimpleInterface, SimpleService>(id: "id5");
-            container.Override(typeof(ISimpleInterface), () => new SecondSimpleService(), id: "id5");
-            Assert.That(container.Resolve<ISimpleInterface>("id5"), Is.InstanceOf<SecondSimpleService>());
-            
-            container.Register<ISimpleInterface, SimpleService>(id: "id6");
-            container.Override<ISimpleInterface>(() => new SecondSimpleService(), id: "id6");
-            Assert.That(container.Resolve<ISimpleInterface>("id6"), Is.InstanceOf<SecondSimpleService>());
-        }
-
 		// TODO: E2E test
 	*/

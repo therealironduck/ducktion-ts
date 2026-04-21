@@ -175,7 +175,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public register<_T>(): ServiceDefinition {
+  public register<_T>(_id?: string): ServiceDefinition {
     throw new Error(
       "register<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -190,7 +190,7 @@ class DiContainer {
    * `__registerAs()` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public registerAs<_Token, _Impl extends _Token>(): ServiceDefinition {
+  public registerAs<_Token, _Impl extends _Token>(_id?: string): ServiceDefinition {
     throw new Error(
       "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -203,7 +203,9 @@ class DiContainer {
    *
    * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
    */
-  public __registerAs(token: string, implementation: any): ServiceDefinition {
+  public __registerAs(token: string, implementation: any, id?: string): ServiceDefinition {
+    if (id) token += `___${id}`;
+
     if (this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is already registered`);
       throw new Error("Service is already registered. Use `override` to override the service");
@@ -241,7 +243,7 @@ class DiContainer {
    * `__resolveByToken` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public resolve<_T>(): _T {
+  public resolve<_T>(_id?: string): _T {
     throw new Error(
       "resolve<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -256,7 +258,9 @@ class DiContainer {
    *
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
-  public __resolveByToken(token: string): any {
+  public __resolveByToken(token: string, id?: string): any {
+    if (id) token += `___${id}`;
+
     return this.innerResolve(token, [], undefined);
   }
 
@@ -270,7 +274,9 @@ class DiContainer {
    *
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
-  public __resolveWithType(token: string, concreteType: any): any {
+  public __resolveWithType(token: string, concreteType: any, id?: string): any {
+    if (id) token += `___${id}`;
+
     return this.innerResolve(token, [], concreteType);
   }
 
@@ -376,7 +382,7 @@ class DiContainer {
    * `__override` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public override<_Token, _Impl extends _Token>(): ServiceDefinition {
+  public override<_Token, _Impl extends _Token>(_id?: string): ServiceDefinition {
     throw new Error(
       "override<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -390,7 +396,9 @@ class DiContainer {
    *
    * Note: It is recommended to use the `override<Token, Impl>` method instead of calling this one directly.
    */
-  public __override(token: string, implementation: any): ServiceDefinition {
+  public __override(token: string, implementation: any, id?: string): ServiceDefinition {
+    if (id) token += `___${id}`;
+
     if (!this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
       throw new Error("Service is not registered. Use `register` to register the service");
