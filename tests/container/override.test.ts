@@ -15,6 +15,16 @@ test("it can override any service", ({ container }) => {
   expect(secondService).toBeInstanceOf(SecondSimpleService);
 });
 
+test("it can override only to set service definition stuff", ({ container }) => {
+  const instance = new SimpleService();
+
+  container.__registerAs("ISimpleService", SimpleService);
+  container.__override("ISimpleService").setInstance(instance);
+
+  const service = container.__resolveByToken("ISimpleService");
+  expect(service).toBe(instance);
+});
+
 describe("error handling", () => {
   test("it throws an error if the `override<T, T2>` method is used without the plugin", ({ container }) => {
     expect(() => container.override<ISimpleService, SimpleService>()).toThrow();
