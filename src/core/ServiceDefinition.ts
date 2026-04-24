@@ -36,6 +36,13 @@ class ServiceDefinition {
    */
   private _singletonMode: SingletonMode | undefined = undefined;
 
+  /**
+   * Specify parameters which will be given to the constructor when service
+   * is resolved. Parameters given here will be not resolved through the
+   * dependency injection container.
+   */
+  private _parameters: Map<string, any> = new Map();
+
   public constructor(serviceType: Instantiable) {
     this.serviceType = serviceType;
   }
@@ -153,6 +160,36 @@ class ServiceDefinition {
    */
   public setSingletonMode(singletonMode: SingletonMode | undefined): ServiceDefinition {
     this._singletonMode = singletonMode;
+    return this;
+  }
+
+  /**
+   * Specify parameters which will be given to the constructor when service
+   * is resolved. Parameters given here will be not resolved through the
+   * dependency injection container.
+   */
+  public get parameters() {
+    return this._parameters;
+  }
+
+  /**
+   * Set parameters which will be given to the constructor when service
+   * is resolved. This will also reset the instance if it was set.
+   */
+  public setParameter(name: string, value: any): ServiceDefinition {
+    this._instance = undefined;
+    this._parameters.set(name, value);
+
+    return this;
+  }
+
+  /**
+   * Remove pre-set parameter when service is resolved. This will also reset
+   * the instance if it was set.
+   */
+  public removeParameter(name: string): ServiceDefinition {
+    this._parameters.delete(name);
+
     return this;
   }
 }
