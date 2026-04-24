@@ -342,7 +342,11 @@ class DiContainer {
 
     // Resolve all dependencies recursively of the constructor
     const instance = new serviceType(
-      ...this.resolveParameters(serviceType.__ducktionDependencies ?? [], dependencyChain),
+      ...this.resolveParameters(
+        serviceType.__ducktionDependencies ?? [],
+        dependencyChain,
+        definition?.parameters ?? new Map(),
+      ),
     );
 
     // And resolve all dependencies that occur because of the Resolve decorator
@@ -402,7 +406,7 @@ class DiContainer {
 
     // Call @resolve-decorated methods with their resolved dependencies
     for (const method of resolveMethods ?? []) {
-      instance[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain]));
+      instance[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain], new Map()));
     }
   }
 
@@ -410,9 +414,19 @@ class DiContainer {
    * This method takes a ducktion dependencies array and resolves all required parameters. It handles circular dependency
    * checks aswell.
    */
-  private resolveParameters(dependencies: DucktionDependencies, dependencyChain: string[]): any {
+  private resolveParameters(
+    dependencies: DucktionDependencies,
+    dependencyChain: string[],
+    parameters: Map<string, any>,
+  ): any {
     return dependencies.map((dep: DucktionDependencies[0]): any => {
       const token = dep.id ? `${dep.token}___${dep.id}` : dep.token;
+
+      // If parameters were set specifically, apply them here and don't use the
+      // service container.
+      if (parameters.has(dep.name)) {
+        return parameters.get(dep.name);
+      }
 
       // If the token is already in the dependencyChain, we have a circular dependency
       if (dependencyChain.includes(token)) {

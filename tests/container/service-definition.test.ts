@@ -110,3 +110,40 @@ describe("singleton", () => {
     expect(definition.singletonMode).toBe("non-singleton");
   });
 });
+
+describe("parameters", () => {
+  test("it can add parameters", ({ container }) => {
+    const definition = container.__registerAs("SimpleService", SimpleService);
+
+    definition.setParameter("hello", 42);
+    expect(definition.parameters.has("hello")).toBeTruthy();
+    expect(definition.parameters.get("hello")).toBe(42);
+
+    definition.setParameter("hello", "world");
+    expect(definition.parameters.keys()).toContain("hello");
+    expect(definition.parameters.get("hello")).toBe("world");
+
+    definition.removeParameter("hello");
+    expect(definition.parameters.has("hello")).toBeFalsy();
+  });
+
+  test("it can set parameters fluently", ({ container }) => {
+    const definition = container.__registerAs("SimpleService", SimpleService);
+
+    definition.setParameter("hello", 42).nonLazy();
+    expect(definition.parameters.has("hello")).toBeTruthy();
+    expect(definition.lazyMode).toBe("non-lazy");
+
+    definition.removeParameter("hello").transient();
+    expect(definition.parameters.has("hello")).toBeFalsy();
+    expect(definition.singletonMode).toBe("non-singleton");
+  });
+
+  test("it resets the instance if the parameter is set", ({ container }) => {
+    const service = new SimpleService();
+    const definition = container.__registerAs("SimpleService", SimpleService);
+
+    definition.setInstance(service).setParameter("hello", 42);
+    expect(definition.instance).toBeNullable();
+  });
+});
