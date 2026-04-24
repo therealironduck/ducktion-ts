@@ -11,6 +11,7 @@ import type { LogLevel } from "./DucktionLogger";
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
 import DucktionLogger, { DUCKTION_LOGGER_TOKEN, LogLevelEnum } from "./DucktionLogger";
 import ServiceDefinition from "./ServiceDefinition";
+import { getStatic } from "./utils";
 
 /**
  * This is the core component of this whole package. It holds a list of all registered services
@@ -345,18 +346,7 @@ class DiContainer {
     );
 
     // And resolve all dependencies that occur because of the Resolve decorator
-    // TODO: Extract into own public method
-    // Inject @resolve()-decorated properties
-    for (const prop of serviceType.__ducktionResolveProperties ?? []) {
-      const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
-      instance[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
-    }
-
-    // Call @resolve-decorated methods with their resolved dependencies
-    for (const method of serviceType.__ducktionResolveMethods ?? []) {
-      instance[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain]));
-    }
-    // END TODO
+    this.resolveDependencies(instance, dependencyChain);
 
     const isAutoResolved = definition === undefined;
 
@@ -392,6 +382,28 @@ class DiContainer {
     }
 
     this.services.set(token, new ServiceDefinition(concreteType).setInstance(instance));
+  }
+
+  /**
+   * Resolve any @resolve decorator usages in the given instance. This will resolve all
+   * properties which have the @resolve decorator, as well as all methods which
+   * contain the @resolve decorator.
+   */
+  public resolveDependencies(instance: any, dependencyChain?: string[]) {
+    dependencyChain ??= [];
+
+    const resolveProperties = getStatic<any[]>(instance, "__ducktionResolveProperties");
+    const resolveMethods = getStatic<any[]>(instance, "__ducktionResolveMethods");
+
+    for (const prop of resolveProperties ?? []) {
+      const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
+      instance[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
+    }
+
+    // Call @resolve-decorated methods with their resolved dependencies
+    for (const method of resolveMethods ?? []) {
+      instance[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain]));
+    }
   }
 
   /**
