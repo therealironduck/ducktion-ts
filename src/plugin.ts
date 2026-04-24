@@ -2,11 +2,11 @@ import type { UnpluginFactory } from "unplugin";
 
 import { createUnplugin } from "unplugin";
 
-import type { Options } from "./types";
+import type { PluginOptions } from "./types";
 
 import { transform } from "./plugin/transform";
 
-export const unpluginFactory: UnpluginFactory<Options | undefined> = () => ({
+export const unpluginFactory: UnpluginFactory<PluginOptions | undefined> = () => ({
   name: "ducktion-ts",
   enforce: "pre",
   transformInclude(id) {
