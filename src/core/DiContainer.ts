@@ -442,7 +442,7 @@ class DiContainer {
    * `__override` method, so that it will keep working even when typescript
    * types are stripped from the production build.
    */
-  public override<_Token, _Impl extends _Token>(_id?: string): ServiceDefinition {
+  public override<_Token, _Impl extends _Token = _Token>(_id?: string): ServiceDefinition {
     throw new Error(
       "override<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
     );
@@ -456,12 +456,20 @@ class DiContainer {
    *
    * Note: It is recommended to use the `override<Token, Impl>` method instead of calling this one directly.
    */
-  public __override(token: string, implementation: any, id?: string): ServiceDefinition {
+  public __override(token: string, implementation?: any, id?: string): ServiceDefinition {
     if (id) token += `___${id}`;
 
     if (!this.services.has(token)) {
       this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
       throw new Error("Service is not registered. Use `register` to register the service");
+    }
+
+    // If no implementation given, return the existing definition as-is so the caller
+    // can configure it (e.g. set a custom instance) without changing the serviceType.
+    if (implementation === undefined) {
+      this.logger?.log(LogLevelEnum.debug, `Overridden service (metadata only): ${token}`);
+
+      return this.services.get(token)!;
     }
 
     // If the `implementation` is abstract, throw an error.

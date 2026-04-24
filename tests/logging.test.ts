@@ -76,6 +76,15 @@ describe("override", () => {
     logger.assertHasMessage(LogLevelEnum.debug, `Overridden service: ISimpleService => ${SecondSimpleService.name}`);
   });
 
+  test("it logs overriding metadata only on the debug channel", ({ container }) => {
+    const logger = fakeLogger(container);
+
+    container.__registerAs("ISimpleService", SimpleService);
+    container.__override("ISimpleService");
+
+    logger.assertHasMessage(LogLevelEnum.debug, "Overridden service (metadata only): ISimpleService");
+  });
+
   test("it logs an error if the service tyring to override doesnt exists", ({ container }) => {
     const logger = fakeLogger(container);
 

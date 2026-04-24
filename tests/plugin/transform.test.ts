@@ -523,13 +523,28 @@ DiContainer.singleton.override<ILogger, DebugLogger>("logger1");
     expect(result).not.toContain("override<ILogger, DebugLogger>");
   });
 
-  test("throws a build error with only one type argument", () => {
+  test("transforms with a single type argument to __override with token only", () => {
     const code = `
 import DiContainer from "${PACKAGE_NAME}";
-DiContainer.singleton.override<IMyService>();
+import type { ILogger } from "./services/logger";
+DiContainer.singleton.override<ILogger>();
 `.trim();
 
-    expect(() => transform(code, "test.ts")).toThrow("`override()` called without required type arguments");
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__override("/project/src/services/logger#ILogger")');
+    expect(result).not.toContain("override<ILogger>");
+  });
+
+  test("forwards string id argument to __override when called with single type argument", () => {
+    const code = `
+import DiContainer from "${PACKAGE_NAME}";
+import type { ILogger } from "./services/logger";
+DiContainer.singleton.override<ILogger>("logger1");
+`.trim();
+
+    const result = transform(code, "/project/src/app.ts");
+    expect(result).toContain('__override("/project/src/services/logger#ILogger", undefined, "logger1")');
+    expect(result).not.toContain("override<ILogger>");
   });
 
   test("does not transform on an unrelated class", () => {

@@ -186,15 +186,20 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   },
   override: {
     replacementName: "__override",
-    requiredTypeArgs: 2,
+    requiredTypeArgs: 1,
     buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
+      if (typeArgs.length < 2) return null;
       const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
       return validateInstantiableType(implTypeName, "override", false, { typeOnlyImports, interfaceNames, enumNames });
     },
     buildArgs: ({ typeArgs, sourceFile, importMap, fileId, idArgText }) => {
       const tokenTypeName = typeArgs[0].getText(sourceFile);
-      const implTypeName = typeArgs[1].getText(sourceFile);
       const token = buildToken(tokenTypeName, importMap, fileId);
+      if (typeArgs.length < 2) {
+        // No implementation: pass undefined so __override reuses the existing serviceType
+        return idArgText ? `"${token}", undefined, ${idArgText}` : `"${token}"`;
+      }
+      const implTypeName = typeArgs[1].getText(sourceFile);
       const base = `"${token}", ${implTypeName}`;
       return idArgText ? `${base}, ${idArgText}` : base;
     },
