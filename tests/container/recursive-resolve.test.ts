@@ -15,10 +15,12 @@ test("it can resolve a service recursively", ({ container }) => {
 
   const service = container.__resolveByToken("ServiceWithDependencies");
   expect(service).toBeInstanceOf(ServiceWithDependencies);
-  expect(service.service).toBeInstanceOf(SimpleService);
+
+  const serviceDep = service as ServiceWithDependencies;
+  expect(serviceDep.service).toBeInstanceOf(SimpleService);
 
   const simple = container.__resolveByToken("ISimpleService");
-  expect(simple).toBe(service.service);
+  expect(simple).toBe(serviceDep.service);
 });
 
 test("it can resolve a service recursively if the type is an interface", ({ container }) => {

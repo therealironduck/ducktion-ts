@@ -33,12 +33,14 @@ describe("error handling", () => {
   test("it throws an error if the overridden service is abstract", ({ container }) => {
     container.__registerAs("ISimpleService", SimpleService);
 
+    // @ts-expect-error - Typescript throws error when abstract class is given
     expect(() => container.__override("ISimpleService", BaseSimpleService)).toThrow("Service is abstract");
   });
 
   test("it throws an error if the overridden service is not a class at all", ({ container }) => {
     container.__registerAs("ISimpleService", SimpleService);
 
+    // @ts-expect-error - Typescript throws error when scalar value is given
     expect(() => container.__override("ISimpleService", 10)).toThrow("Service is not instantiable");
   });
 

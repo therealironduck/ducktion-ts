@@ -1,4 +1,4 @@
-import type { Instantiable, LazyMode, SingletonMode } from "../types";
+import type { Implementation, LazyMode, SingletonMode } from "../types";
 
 /**
  * This class hold all the information needed to resolve a service.
@@ -9,7 +9,7 @@ class ServiceDefinition {
    * The type of the service. Or to be more precice it has to be an instantiable
    * type, e.g. a class for example.
    */
-  public readonly serviceType: Instantiable;
+  public readonly serviceType: Implementation;
 
   /**
    * The singleton instance of the service. Can be undefined if the service is not a singleton
@@ -17,12 +17,12 @@ class ServiceDefinition {
    *
    * Can only be set by the container.
    */
-  private _instance: any = undefined;
+  private _instance: object | undefined = undefined;
 
   /**
    * The given callback to resolve the service. Can be undefined if no callback was given.
    */
-  private _callback: (() => any) | undefined = undefined;
+  private _callback: (() => object) | undefined = undefined;
 
   /**
    * Specify if the service should be resolved lazily or not. By default, no lazy mode
@@ -41,9 +41,9 @@ class ServiceDefinition {
    * is resolved. Parameters given here will be not resolved through the
    * dependency injection container.
    */
-  private _parameters: Map<string, any> = new Map();
+  private _parameters: Map<string, unknown> = new Map();
 
-  public constructor(serviceType: Instantiable) {
+  public constructor(serviceType: Implementation) {
     this.serviceType = serviceType;
   }
 
@@ -53,7 +53,7 @@ class ServiceDefinition {
    *
    * Can only be set by the container.
    */
-  public get instance() {
+  public get instance(): object | undefined {
     return this._instance;
   }
 
@@ -61,7 +61,7 @@ class ServiceDefinition {
    * Set the instance of this service. This will override the
    * concrete implementation or reset it if undefined is given.
    */
-  public setInstance(instance: any): ServiceDefinition {
+  public setInstance(instance: object | undefined): ServiceDefinition {
     this._instance = instance;
 
     return this;
@@ -70,7 +70,7 @@ class ServiceDefinition {
   /**
    * The given callback to resolve the service. Can be undefined if no callback was given.
    */
-  public get callback() {
+  public get callback(): (() => object) | undefined {
     return this._callback;
   }
 
@@ -78,7 +78,7 @@ class ServiceDefinition {
    * Set the callback which will be executed when the service is
    * resolved. This will also reset the instance if it was set.
    */
-  public setCallback(callback: (() => any) | undefined): ServiceDefinition {
+  public setCallback(callback: (() => object) | undefined): ServiceDefinition {
     this._callback = callback;
     this._instance = undefined;
 
@@ -168,7 +168,7 @@ class ServiceDefinition {
    * is resolved. Parameters given here will be not resolved through the
    * dependency injection container.
    */
-  public get parameters() {
+  public get parameters(): Map<string, unknown> {
     return this._parameters;
   }
 
@@ -176,7 +176,7 @@ class ServiceDefinition {
    * Set parameters which will be given to the constructor when service
    * is resolved. This will also reset the instance if it was set.
    */
-  public setParameter(name: string, value: any): ServiceDefinition {
+  public setParameter(name: string, value: unknown): ServiceDefinition {
     this._instance = undefined;
     this._parameters.set(name, value);
 

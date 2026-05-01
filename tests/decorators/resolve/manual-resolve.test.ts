@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 
-import { LogLevelEnum } from "../../../src";
+import { LogLevel } from "../../../src";
 import { fakeLogger, test } from "../../base";
 import { ServiceWithResolveMethod } from "../../stubs/DecoratorServices";
 import SimpleService, { SecondSimpleService } from "../../stubs/SimpleService";
@@ -15,11 +15,11 @@ test("it can resolve any variables after the object already exists", ({ containe
   expect(service.another).toBeNullable();
   expect(service.simple).toBeNullable();
 
-  logger.assertHasNoMessage(LogLevelEnum.debug, "I was called!");
+  logger.assertHasNoMessage(LogLevel.debug, "I was called!");
 
   container.resolveDependencies(service);
   expect(service.another).toBeInstanceOf(SecondSimpleService);
   expect(service.simple).toBeInstanceOf(SimpleService);
 
-  logger.assertHasMessage(LogLevelEnum.debug, "I was called!");
+  logger.assertHasMessage(LogLevel.debug, "I was called!");
 });

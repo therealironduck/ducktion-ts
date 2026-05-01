@@ -1,6 +1,6 @@
 import { describe, expect } from "vitest";
 
-import { LogLevelEnum } from "../../../src";
+import { LogLevel } from "../../../src";
 import { fakeLogger, test } from "../../base";
 import {
   ServiceWithIdConstructorArgument,
@@ -54,7 +54,7 @@ describe("usage without id", () => {
     expect(serviceRes.simple).toBeInstanceOf(SimpleService);
     expect(serviceRes.another).toBeInstanceOf(SecondSimpleService);
 
-    logger.assertHasMessage(LogLevelEnum.debug, "I was called!");
+    logger.assertHasMessage(LogLevel.debug, "I was called!");
   });
 
   test("it can resolve and call whole private methods that have the decorator", ({ container }) => {
@@ -71,7 +71,7 @@ describe("usage without id", () => {
     expect(serviceRes.simple).toBeInstanceOf(SimpleService);
     expect(serviceRes.another).toBeInstanceOf(SecondSimpleService);
 
-    logger.assertHasMessage(LogLevelEnum.debug, "I was called!");
+    logger.assertHasMessage(LogLevel.debug, "I was called!");
   });
 });
 

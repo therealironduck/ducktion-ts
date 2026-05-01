@@ -2,14 +2,15 @@ import type {
   ContainerOptions,
   DiConfigurator,
   DucktionDependencies,
-  Instantiable,
+  DucktionResolveMethods,
+  DucktionResolveParameters,
+  Implementation,
   LazyMode,
   SingletonMode,
 } from "../types";
-import type { LogLevel } from "./DucktionLogger";
 
 import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
-import DucktionLogger, { DUCKTION_LOGGER_TOKEN, LogLevelEnum } from "./DucktionLogger";
+import DucktionLogger, { DUCKTION_LOGGER_TOKEN, LogLevel } from "./DucktionLogger";
 import ServiceDefinition from "./ServiceDefinition";
 import { getStatic } from "./utils";
 
@@ -63,7 +64,7 @@ class DiContainer {
    * In production you should set this to `error` to only log errors. In development you can set it
    * to `info` or `debug` to get more detailed information.
    */
-  private logLevel: LogLevel = LogLevelEnum.error;
+  private logLevel: LogLevel = LogLevel.error;
 
   /**
    * If set, Ducktion will try to automatically resolve any given type. This means you don't need
@@ -110,28 +111,34 @@ class DiContainer {
    * Initialize the container. This will create a new logger instance with the configured log level.
    * This is an alias for `reinitialize`
    */
-  public initialize(): void {
-    this.reinitialize();
+  public initialize(): DiContainer {
+    return this.reinitialize();
   }
 
   /**
    * Reinitialize the container. This will create a new logger instance with the configured log level.
    */
-  public reinitialize(): void {
-    this.logger = this.__resolveByToken(DUCKTION_LOGGER_TOKEN);
+  public reinitialize(): DiContainer {
+    this.logger = this.__resolveByToken(DUCKTION_LOGGER_TOKEN) as DucktionLogger;
     this.logger?.configure(this.logLevel);
 
     this.configurators.forEach((c) => {
       c.register(this);
 
-      this.logger?.log(LogLevelEnum.info, `Using configurator: ${c.name()}`);
+      this.logger?.log(LogLevel.info, `Using configurator: ${c.name()}`);
     });
 
     this.initializeNonLazyServices();
 
-    this.logger?.log(LogLevelEnum.info, "Reinitialized container");
+    this.logger?.log(LogLevel.info, "Reinitialized container");
+
+    return this;
   }
 
+  /**
+   * This will initialize all non-lazy services. If a service has no lazy mode specified, it will
+   * default to the `defaultLazyMode` variable.
+   */
   private initializeNonLazyServices(): void {
     this.services.forEach((definition, key) => {
       if (
@@ -149,9 +156,9 @@ class DiContainer {
    * @param newLevel The log level
    * @param newEnableAutoResolve Should auto resolve be enabled
    */
-  public configure(options: Partial<ContainerOptions>): void {
+  public configure(options: Partial<ContainerOptions>): DiContainer {
     const {
-      newLevel = LogLevelEnum.error,
+      newLevel = LogLevel.error,
       newEnableAutoResolve = true,
       newAutoResolveSingletonMode = "singleton",
       newDefaultLazyMode = "lazy",
@@ -163,7 +170,8 @@ class DiContainer {
     this.autoResolveSingletonMode = newAutoResolveSingletonMode;
     this.defaultLazyMode = newDefaultLazyMode;
     this.defaultSingletonMode = newDefaultSingletonMode;
-    this.reinitialize();
+
+    return this.reinitialize();
   }
 
   /**
@@ -171,8 +179,10 @@ class DiContainer {
    * the container is already initialized. If you want to reinitialize the container, use
    * the `reinitialize` method.
    */
-  public addConfigurator(configurator: DiConfigurator): void {
+  public addConfigurator(configurator: DiConfigurator): DiContainer {
     this.configurators.push(configurator);
+
+    return this;
   }
 
   /**
@@ -211,18 +221,18 @@ class DiContainer {
    *
    * Note: It is recommended to use the `registerAs<Token, Impl>` method instead of calling this one directly.
    */
-  public __registerAs(token: string, implementation: any, id?: string): ServiceDefinition {
+  public __registerAs(token: string, implementation: Implementation, id?: string): ServiceDefinition {
     if (id) token += `___${id}`;
 
     if (this.services.has(token)) {
-      this.logger?.log(LogLevelEnum.error, `Service '${token}' is already registered`);
+      this.logger?.log(LogLevel.error, `Service '${token}' is already registered`);
       throw new Error("Service is already registered. Use `override` to override the service");
     }
 
     // If the `implementation` is abstract, throw an error.
     // The `__ducktionAbstract` marker will be set by our Vite/Rollup plugin
     if (Object.hasOwn(implementation, "__ducktionAbstract")) {
-      this.logger?.log(LogLevelEnum.error, `Service '${implementation.name}' is abstract`);
+      this.logger?.log(LogLevel.error, `Service '${implementation.name}' is abstract`);
       throw new Error("Service is abstract");
     }
 
@@ -235,7 +245,7 @@ class DiContainer {
 
     this.services.set(token, definition);
 
-    this.logger?.log(LogLevelEnum.debug, `Registered service: ${token} => ${implementation.name}`);
+    this.logger?.log(LogLevel.debug, `Registered service: ${token} => ${implementation.name}`);
 
     return definition;
   }
@@ -266,10 +276,10 @@ class DiContainer {
    *
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
-  public __resolveByToken(token: string, id?: string): any {
+  public __resolveByToken(token: string, id?: string): object {
     if (id) token += `___${id}`;
 
-    return this.innerResolve(token, [], undefined);
+    return this.innerResolve(token, []);
   }
 
   /**
@@ -282,7 +292,7 @@ class DiContainer {
    *
    * Note: It is recommended to use the `resolve<T>` method instead of calling this one directly.
    */
-  public __resolveWithType(token: string, concreteType: any, id?: string): any {
+  public __resolveWithType(token: string, concreteType: Implementation | undefined, id?: string): object {
     if (id) token += `___${id}`;
 
     return this.innerResolve(token, [], concreteType);
@@ -292,17 +302,17 @@ class DiContainer {
    * Inner logic to resolve a component. This method handles the recursive resolving of all
    * parameters of the constructor. Also it checks for circular dependencies.
    */
-  private innerResolve(token: string, dependencyChain: string[], concreteType: any): any {
+  private innerResolve(token: string, dependencyChain: string[], concreteType?: Implementation): object {
     // If we try to resolve scalar values (number, string, etc.) we just fail instantly
     if (token === SCALAR_TOKEN) {
-      this.logger?.log(LogLevelEnum.error, "Service cant resolve parameter, because it is a scalar value");
+      this.logger?.log(LogLevel.error, "Service cant resolve parameter, because it is a scalar value");
       throw new Error(`Parameter is a scalar value and cannot be resolved`);
     }
 
     // If there is no service registered for the given token
     // AND auto resolve isn't enabled, we will throw an exception and cancel right away
     if (!this.services.has(token) && !this.enableAutoResolve) {
-      this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
+      this.logger?.log(LogLevel.error, `Service '${token}' is not registered`);
       throw new Error(`Service is not registered`);
     }
 
@@ -333,7 +343,7 @@ class DiContainer {
     // registered type.
     const serviceType = definition?.serviceType ?? concreteType ?? undefined;
     if (!serviceType) {
-      this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
+      this.logger?.log(LogLevel.error, `Service '${token}' is not registered`);
       throw new Error(`Service is not registered`);
     }
 
@@ -367,7 +377,7 @@ class DiContainer {
       this.storeAsSingleton(token, instance, serviceType);
     }
 
-    this.logger?.log(LogLevelEnum.debug, `Resolved service: ${token} => ${serviceType.name}`);
+    this.logger?.log(LogLevel.debug, `Resolved service: ${token} => ${serviceType.name}`);
 
     return instance;
   }
@@ -377,7 +387,7 @@ class DiContainer {
    * If the type is already registered, it will override the instance.
    * Otherwise it will create a new service definition.
    */
-  private storeAsSingleton(token: string, instance: any, concreteType: Instantiable): void {
+  private storeAsSingleton(token: string, instance: object, concreteType: Implementation): void {
     const definition = this.services.get(token);
     if (definition) {
       definition.setInstance(instance);
@@ -393,20 +403,22 @@ class DiContainer {
    * properties which have the @resolve decorator, as well as all methods which
    * contain the @resolve decorator.
    */
-  public resolveDependencies(instance: any, dependencyChain?: string[]) {
+  public resolveDependencies(instance: object, dependencyChain?: string[]) {
     dependencyChain ??= [];
 
-    const resolveProperties = getStatic<any[]>(instance, "__ducktionResolveProperties");
-    const resolveMethods = getStatic<any[]>(instance, "__ducktionResolveMethods");
+    const resolveProperties = getStatic<DucktionResolveParameters>(instance, "__ducktionResolveProperties");
+    const resolveMethods = getStatic<DucktionResolveMethods>(instance, "__ducktionResolveMethods");
+
+    const obj = instance as unknown as Record<string, any>;
 
     for (const prop of resolveProperties ?? []) {
       const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
-      instance[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
+      obj[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
     }
 
     // Call @resolve-decorated methods with their resolved dependencies
     for (const method of resolveMethods ?? []) {
-      instance[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain], new Map()));
+      obj[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain], new Map()));
     }
   }
 
@@ -417,9 +429,9 @@ class DiContainer {
   private resolveParameters(
     dependencies: DucktionDependencies,
     dependencyChain: string[],
-    parameters: Map<string, any>,
-  ): any {
-    return dependencies.map((dep: DucktionDependencies[0]): any => {
+    parameters: Map<string, unknown>,
+  ): unknown[] {
+    return dependencies.map((dep): any => {
       const token = dep.id ? `${dep.token}___${dep.id}` : dep.token;
 
       // If parameters were set specifically, apply them here and don't use the
@@ -430,7 +442,7 @@ class DiContainer {
 
       // If the token is already in the dependencyChain, we have a circular dependency
       if (dependencyChain.includes(token)) {
-        this.logger?.log(LogLevelEnum.error, `Circular dependency detected for parameter: ${dep.name}`);
+        this.logger?.log(LogLevel.error, `Circular dependency detected for parameter: ${dep.name}`);
         throw new Error(`Circular dependency detected for parameter '${dep.name}'`);
       }
 
@@ -470,18 +482,18 @@ class DiContainer {
    *
    * Note: It is recommended to use the `override<Token, Impl>` method instead of calling this one directly.
    */
-  public __override(token: string, implementation?: any, id?: string): ServiceDefinition {
+  public __override(token: string, implementation?: Implementation, id?: string): ServiceDefinition {
     if (id) token += `___${id}`;
 
     if (!this.services.has(token)) {
-      this.logger?.log(LogLevelEnum.error, `Service '${token}' is not registered`);
+      this.logger?.log(LogLevel.error, `Service '${token}' is not registered`);
       throw new Error("Service is not registered. Use `register` to register the service");
     }
 
     // If no implementation given, return the existing definition as-is so the caller
     // can configure it (e.g. set a custom instance) without changing the serviceType.
     if (implementation === undefined) {
-      this.logger?.log(LogLevelEnum.debug, `Overridden service (metadata only): ${token}`);
+      this.logger?.log(LogLevel.debug, `Overridden service (metadata only): ${token}`);
 
       return this.services.get(token)!;
     }
@@ -500,7 +512,7 @@ class DiContainer {
     const definition = new ServiceDefinition(implementation);
     this.services.set(token, definition);
 
-    this.logger?.log(LogLevelEnum.debug, `Overridden service: ${token} => ${implementation.name}`);
+    this.logger?.log(LogLevel.debug, `Overridden service: ${token} => ${implementation.name}`);
 
     return definition;
   }
@@ -508,24 +520,26 @@ class DiContainer {
   /**
    * Remove all registered services and singleton instances, basically resetting the container.
    */
-  public clear(): void {
-    this.logger?.log(LogLevelEnum.info, "Clearing container");
+  public clear(): DiContainer {
+    this.logger?.log(LogLevel.info, "Clearing container");
 
     this.services.clear();
 
     this.services.set(DUCKTION_LOGGER_TOKEN, new ServiceDefinition(DucktionLogger));
-    this.reinitialize();
+
+    return this.reinitialize();
   }
 
   /**
    * Reset every singleton instance. This will not remove the registered services.
    * If you want to reset everything, use `clear` instead.
    */
-  public resetSingletons(): void {
-    this.logger?.log(LogLevelEnum.info, "Resetting container");
+  public resetSingletons(): DiContainer {
+    this.logger?.log(LogLevel.info, "Resetting container");
 
     this.services.forEach((service) => service.setInstance(undefined));
-    this.reinitialize();
+
+    return this.reinitialize();
   }
 }
 

@@ -1,7 +1,7 @@
 import { test as baseTest } from "vitest";
 
 import DiContainer from "../src";
-import { DUCKTION_LOGGER_TOKEN, LogLevelEnum } from "../src/core/DucktionLogger";
+import { DUCKTION_LOGGER_TOKEN, LogLevel } from "../src/core/DucktionLogger";
 import { ContainerOptions } from "../src/types";
 import { FakeLogger } from "./FakeLogger";
 
@@ -15,12 +15,12 @@ export const testWithConfig = (config: Partial<ContainerOptions>) => {
 };
 
 export const test = testWithConfig({
-  newLevel: LogLevelEnum.disabled,
+  newLevel: LogLevel.disabled,
   newEnableAutoResolve: false,
 });
 
 export const testWithAutoResolve = testWithConfig({
-  newLevel: LogLevelEnum.disabled,
+  newLevel: LogLevel.disabled,
   newEnableAutoResolve: true,
 });
 
