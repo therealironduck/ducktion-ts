@@ -1,4 +1,4 @@
-import { DucktionLogger, LogLevelEnum, id, resolve } from "../../src";
+import { DucktionLogger, LogLevel, id, resolve } from "../../src";
 import { DUCKTION_LOGGER_TOKEN } from "../../src/core/DucktionLogger";
 import SimpleService, { SecondSimpleService } from "./SimpleService";
 
@@ -52,7 +52,7 @@ export class ServiceWithResolveMethod {
 
   @resolve
   public hello(simple: SimpleService, another: SecondSimpleService, logger: DucktionLogger) {
-    logger.log(LogLevelEnum.debug, "I was called!");
+    logger.log(LogLevel.debug, "I was called!");
 
     this.simple = simple;
     this.another = another;
@@ -77,7 +77,7 @@ export class ServiceWithPrivateResolveMethod {
 
   @resolve
   private hello(simple: SimpleService, another: SecondSimpleService, logger: DucktionLogger) {
-    logger.log(LogLevelEnum.debug, "I was called!");
+    logger.log(LogLevel.debug, "I was called!");
 
     this.simple = simple;
     this.another = another;

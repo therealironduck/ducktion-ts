@@ -1,6 +1,6 @@
 import { describe, expect } from "vitest";
 
-import { LogLevelEnum } from "../src/core/DucktionLogger";
+import { LogLevel } from "../src/core/DucktionLogger";
 import { fakeLogger, test } from "./base";
 import { ExampleConfigurator } from "./stubs/ExampleConfigurator";
 import { RecursiveAService, RecursiveBService } from "./stubs/RecursiveServices";
@@ -9,7 +9,7 @@ import SimpleService, { SecondSimpleService, BaseSimpleService } from "./stubs/S
 
 describe("general logs", () => {
   test("it logs initializations on the info channel", ({ container }) => {
-    fakeLogger(container).assertHasMessage(LogLevelEnum.info, "Reinitialized container");
+    fakeLogger(container).assertHasMessage(LogLevel.info, "Reinitialized container");
   });
 
   test("it logs clears on the info channel", ({ container }) => {
@@ -17,7 +17,7 @@ describe("general logs", () => {
 
     container.clear();
 
-    logger.assertHasMessage(LogLevelEnum.info, "Clearing container");
+    logger.assertHasMessage(LogLevel.info, "Clearing container");
   });
 
   test("it logs resets on the info channel", ({ container }) => {
@@ -25,7 +25,7 @@ describe("general logs", () => {
 
     container.resetSingletons();
 
-    logger.assertHasMessage(LogLevelEnum.info, "Resetting container");
+    logger.assertHasMessage(LogLevel.info, "Resetting container");
   });
 
   test("it logs all used configurators in the info channel", ({ container }) => {
@@ -35,7 +35,7 @@ describe("general logs", () => {
     container.addConfigurator(configurator);
     container.reinitialize();
 
-    logger.assertHasMessage(LogLevelEnum.info, `Using configurator: ${configurator.name()}`);
+    logger.assertHasMessage(LogLevel.info, `Using configurator: ${configurator.name()}`);
   });
 });
 
@@ -45,7 +45,7 @@ describe("register", () => {
 
     container.__registerAs("SimpleService", SimpleService);
 
-    logger.assertHasMessage(LogLevelEnum.debug, `Registered service: SimpleService => ${SimpleService.name}`);
+    logger.assertHasMessage(LogLevel.debug, `Registered service: SimpleService => ${SimpleService.name}`);
   });
 
   test("it logs an error if the service trying to register already exists", ({ container }) => {
@@ -54,15 +54,16 @@ describe("register", () => {
     container.__registerAs("SimpleService", SimpleService);
     expect(() => container.__registerAs("SimpleService", SimpleService)).toThrow();
 
-    logger.assertHasMessage(LogLevelEnum.error, "Service 'SimpleService' is already registered");
+    logger.assertHasMessage(LogLevel.error, "Service 'SimpleService' is already registered");
   });
 
   test("it logs an error if the service trying to register is abstract", ({ container }) => {
     const logger = fakeLogger(container);
 
+    // @ts-expect-error - Typescript throws error when abstract class is given
     expect(() => container.__registerAs("BaseSimpleService", BaseSimpleService)).toThrow();
 
-    logger.assertHasMessage(LogLevelEnum.error, "Service 'BaseSimpleService' is abstract");
+    logger.assertHasMessage(LogLevel.error, "Service 'BaseSimpleService' is abstract");
   });
 });
 
@@ -73,7 +74,7 @@ describe("override", () => {
     container.__registerAs("ISimpleService", SimpleService);
     container.__override("ISimpleService", SecondSimpleService);
 
-    logger.assertHasMessage(LogLevelEnum.debug, `Overridden service: ISimpleService => ${SecondSimpleService.name}`);
+    logger.assertHasMessage(LogLevel.debug, `Overridden service: ISimpleService => ${SecondSimpleService.name}`);
   });
 
   test("it logs overriding metadata only on the debug channel", ({ container }) => {
@@ -82,7 +83,7 @@ describe("override", () => {
     container.__registerAs("ISimpleService", SimpleService);
     container.__override("ISimpleService");
 
-    logger.assertHasMessage(LogLevelEnum.debug, "Overridden service (metadata only): ISimpleService");
+    logger.assertHasMessage(LogLevel.debug, "Overridden service (metadata only): ISimpleService");
   });
 
   test("it logs an error if the service tyring to override doesnt exists", ({ container }) => {
@@ -90,7 +91,7 @@ describe("override", () => {
 
     expect(() => container.__override("ISimpleService", SecondSimpleService)).toThrow();
 
-    logger.assertHasMessage(LogLevelEnum.error, "Service 'ISimpleService' is not registered");
+    logger.assertHasMessage(LogLevel.error, "Service 'ISimpleService' is not registered");
   });
 });
 
@@ -101,7 +102,7 @@ describe("resolve", () => {
     container.__registerAs("ISimpleService", SimpleService);
     container.__resolveByToken("ISimpleService");
 
-    logger.assertHasMessage(LogLevelEnum.debug, `Resolved service: ISimpleService => ${SimpleService.name}`);
+    logger.assertHasMessage(LogLevel.debug, `Resolved service: ISimpleService => ${SimpleService.name}`);
   });
 
   test("it logs an error if the service trying to resolve isnt registered", ({ container }) => {
@@ -109,7 +110,7 @@ describe("resolve", () => {
 
     expect(() => container.__resolveByToken("ISimpleService")).toThrow();
 
-    logger.assertHasMessage(LogLevelEnum.error, "Service 'ISimpleService' is not registered");
+    logger.assertHasMessage(LogLevel.error, "Service 'ISimpleService' is not registered");
   });
 
   test("it logs an error if a circular dependency was found", ({ container }) => {
@@ -120,7 +121,7 @@ describe("resolve", () => {
 
     expect(() => container.__resolveByToken("RecursiveAService")).toThrow();
 
-    logger.assertHasMessage(LogLevelEnum.error, "Circular dependency detected for parameter: a");
+    logger.assertHasMessage(LogLevel.error, "Circular dependency detected for parameter: a");
   });
 
   test("it logs an error if any parameter cant be resolved", ({ container }) => {
@@ -130,6 +131,6 @@ describe("resolve", () => {
 
     expect(() => container.__resolveByToken("ScalarService")).toThrow();
 
-    logger.assertHasMessage(LogLevelEnum.error, "Service cant resolve parameter, because it is a scalar value");
+    logger.assertHasMessage(LogLevel.error, "Service cant resolve parameter, because it is a scalar value");
   });
 });

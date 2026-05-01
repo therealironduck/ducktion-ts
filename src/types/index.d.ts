@@ -1,14 +1,23 @@
 import type { ContainerOptions, DiConfigurator } from "./container";
 import type { PluginOptions } from "./plugin";
-import type { SingletonMode, LazyMode } from "./services";
-import type { Instantiable, DucktionDependencies } from "./static";
+import type {
+  Implementation,
+  LazyMode,
+  SingletonMode,
+  DucktionDependencies,
+  DucktionResolveParameters,
+  DucktionResolveMethods,
+} from "./services";
 
 export type {
-  PluginOptions,
-  Instantiable,
-  DucktionDependencies,
-  SingletonMode,
-  LazyMode,
   ContainerOptions,
   DiConfigurator,
+  PluginOptions,
+  Implementation,
+  LazyMode,
+  SingletonMode,
+  Instantiable,
+  DucktionDependencies,
+  DucktionResolveParameters,
+  DucktionResolveMethods,
 };

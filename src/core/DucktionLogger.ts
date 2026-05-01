@@ -1,23 +1,23 @@
 export const DUCKTION_LOGGER_TOKEN = "@therealironduck/ducktion-ts#DucktionLogger";
 
-export const LogLevelEnum = {
+export const LogLevel = {
   debug: 0,
   info: 1,
   error: 2,
   disabled: 4,
 } as const;
 
-export type LogLevel = (typeof LogLevelEnum)[keyof typeof LogLevelEnum];
+export type LogLevel = (typeof LogLevel)[keyof typeof LogLevel];
 
 const LEVEL_LABEL: Record<LogLevel, string> = {
-  [LogLevelEnum.debug]: "Debug",
-  [LogLevelEnum.info]: "Info",
-  [LogLevelEnum.error]: "Error",
-  [LogLevelEnum.disabled]: "Disabled",
+  [LogLevel.debug]: "Debug",
+  [LogLevel.info]: "Info",
+  [LogLevel.error]: "Error",
+  [LogLevel.disabled]: "Disabled",
 };
 
 export default class DucktionLogger {
-  private logLevel: LogLevel = LogLevelEnum.error;
+  private logLevel: LogLevel = LogLevel.error;
 
   public configure(level: LogLevel): void {
     this.logLevel = level;
@@ -29,12 +29,12 @@ export default class DucktionLogger {
     }
 
     switch (level) {
-      case LogLevelEnum.error:
+      case LogLevel.error:
         console.error(`[Ducktion] [${LEVEL_LABEL[level]}] ${message}`);
         break;
 
-      case LogLevelEnum.debug:
-      case LogLevelEnum.info:
+      case LogLevel.debug:
+      case LogLevel.info:
         console.log(`[Ducktion] [${LEVEL_LABEL[level]}] ${message}`);
         break;
     }

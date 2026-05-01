@@ -4,6 +4,8 @@
  * whole methods.
  */
 
+import type { Implementation } from "../../types";
+
 /** Resolves the dependency by type, using the property's type annotation as the token. */
 export function resolve(): (target: any, propertyKey: string) => void;
 
@@ -11,19 +13,23 @@ export function resolve(): (target: any, propertyKey: string) => void;
 export function resolve(id: string): (target: any, propertyKey: string) => void;
 
 /** Plugin-transformed form: resolve("token", ConcreteType) — emitted by the build plugin, not called by users directly. */
-export function resolve(token: string, concrete: any): (target: any, propertyKey: string) => void;
+export function resolve(token: string, concrete: Implementation): (target: any, propertyKey: string) => void;
 
 /** Plugin-transformed form: resolve("token", ConcreteType, "id" | undefined) — emitted by the build plugin, not called by users directly. */
 export function resolve(
   token: string,
-  concrete: any,
+  concrete: Implementation,
   id: string | undefined,
 ): (target: any, propertyKey: string) => void;
 
 /** Applied as a bare `@resolve` on a method — the plugin injects the method into `__ducktionResolveMethods` so the container calls it with resolved arguments after instantiation. */
 export function resolve(target: any, propertyKey: string, descriptor: PropertyDescriptor): void;
 
-export function resolve(tokenOrIdOrTarget?: any, concreteTypeOrKey?: any, idOrDescriptor?: any): any {
+export function resolve(
+  tokenOrIdOrTarget?: any,
+  concreteTypeOrKey?: Implementation | string,
+  idOrDescriptor?: any,
+): any {
   if (typeof tokenOrIdOrTarget === "string") {
     // Plugin-transformed property decorator: resolve("token", ConcreteType|undefined, "id"?)
     const token = tokenOrIdOrTarget;

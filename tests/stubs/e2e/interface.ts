@@ -1,7 +1,7 @@
-import DiContainer, { LogLevelEnum } from "@therealironduck/ducktion-ts";
+import DiContainer, { LogLevel } from "@therealironduck/ducktion-ts";
 
 DiContainer.singleton.configure({
-  newLevel: LogLevelEnum.disabled,
+  newLevel: LogLevel.disabled,
   newEnableAutoResolve: false,
 });
 
