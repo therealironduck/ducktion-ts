@@ -30,3 +30,12 @@ export function fakeLogger(container: DiContainer): FakeLogger {
 
   return container.__resolveByToken(DUCKTION_LOGGER_TOKEN) as FakeLogger;
 }
+
+export function countGenerator(generator: Generator): number {
+  let count = 0;
+  for (let _ of generator) {
+    count++;
+  }
+
+  return count;
+}

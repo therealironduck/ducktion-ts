@@ -223,3 +223,84 @@ class Consumer {
     expect(result).not.toContain("id:");
   });
 });
+
+describe("@resolveTags() on method parameters", () => {
+  test("injects tag-based entry into the method's dependencies", () => {
+    const code = `
+import { resolve, resolveTags } from "${PACKAGE_NAME}";
+class Consumer {
+  @resolve
+  public init(@resolveTags("example") items: object[]) {}
+}
+`.trim();
+
+    const result = transformDecoratorMethods(code, "/project/src/app.ts");
+    expect(result).toContain('token: "ducktion__tag"');
+    expect(result).toContain('tag: "example"');
+    expect(result).toContain('name: "items"');
+  });
+
+  test("does not inject concrete or id for a tagged parameter", () => {
+    const code = `
+import { resolve, resolveTags } from "${PACKAGE_NAME}";
+class Consumer {
+  @resolve
+  public init(@resolveTags("example") items: object[]) {}
+}
+`.trim();
+
+    const result = transformDecoratorMethods(code, "/project/src/app.ts");
+    expect(result).not.toContain("concrete:");
+    expect(result).not.toContain("id:");
+  });
+
+  test("handles mixed parameters: tagged and normal", () => {
+    const code = `
+import { resolve, resolveTags } from "${PACKAGE_NAME}";
+import { MyService } from "./my-service";
+class Consumer {
+  @resolve
+  public init(@resolveTags("example") items: object[], dep: MyService) {}
+}
+`.trim();
+
+    const result = transformDecoratorMethods(code, "/project/src/app.ts");
+    expect(result).toContain('tag: "example"');
+    expect(result).toContain('name: "items"');
+    expect(result).toContain('name: "dep"');
+    expect(result).toContain('"/project/src/my-service#MyService"');
+    const taggedEntry = result.match(/\{[^}]*"ducktion__tag"[^}]*\}/)?.[0];
+    expect(taggedEntry).toBeDefined();
+    expect(taggedEntry).not.toContain('"dep"');
+  });
+
+  test("does not inject tag when @resolveTags comes from a different package", () => {
+    const code = `
+import { resolve } from "${PACKAGE_NAME}";
+import { resolveTags } from "some-other-lib";
+class Consumer {
+  @resolve
+  public init(@resolveTags("example") items: object[]) {}
+}
+`.trim();
+
+    const result = transformDecoratorMethods(code, "/project/src/app.ts");
+    expect(result).not.toContain('tag: "example"');
+    expect(result).not.toContain('"ducktion__tag"');
+  });
+
+  test("ignores @resolveTags when argument is not a string literal", () => {
+    const code = `
+import { resolve, resolveTags } from "${PACKAGE_NAME}";
+const TAG = "example";
+class Consumer {
+  @resolve
+  public init(@resolveTags(TAG) items: object[]) {}
+}
+`.trim();
+
+    const result = transformDecoratorMethods(code, "/project/src/app.ts");
+    expect(result).not.toContain("tag:");
+    expect(result).not.toContain('"ducktion__tag"');
+  });
+});

@@ -32,6 +32,7 @@ export type DucktionDependencies = Array<{
   token: string;
   concrete?: Implementation;
   id?: string;
+  tag?: string;
 }>;
 
 /**
@@ -52,4 +53,13 @@ export type DucktionResolveParameters = Array<{
 export type DucktionResolveMethods = Array<{
   methodKey: string;
   dependencies: DucktionDependencies;
+}>;
+
+/**
+ * This type defines the parameters that the `@resolveTags` decorator contains if used
+ * for parameters.
+ */
+export type DucktionResolveTagsParameters = Array<{
+  propertyKey: string;
+  tag: string;
 }>;

@@ -147,3 +147,28 @@ describe("parameters", () => {
     expect(definition.instance).toBeNullable();
   });
 });
+
+describe("tags", () => {
+  test("it can add tags", ({ container }) => {
+    const definition = container.__registerAs("SimpleService", SimpleService);
+    definition.addTag("tag");
+    expect(definition.tags).toContain("tag");
+
+    definition.removeTag("tag");
+    expect(definition.tags).not.toContain("tag");
+  });
+
+  test("it can add tags fluently", ({ container }) => {
+    const definition = container.__registerAs("SimpleService", SimpleService);
+    definition.addTag("tag").withTag("tag2").lazy();
+    expect(definition.tags).toContain("tag");
+    expect(definition.tags).toContain("tag2");
+    expect(definition.lazyMode).toBe("lazy");
+
+    definition.removeTag("tag").withTags("abc", "def").nonLazy();
+    expect(definition.tags).not.toContain("tag");
+    expect(definition.tags).toContain("abc");
+    expect(definition.tags).toContain("def");
+    expect(definition.lazyMode).toBe("non-lazy");
+  });
+});

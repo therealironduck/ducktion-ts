@@ -3,7 +3,9 @@ export abstract class BaseSimpleService implements ISimpleService {
   static __ducktionAbstract = true;
 }
 
-export default class SimpleService extends BaseSimpleService {}
+export default class SimpleService extends BaseSimpleService {
+  public a: number = 20;
+}
 
 export class SecondSimpleService implements ISimpleService {}
 
