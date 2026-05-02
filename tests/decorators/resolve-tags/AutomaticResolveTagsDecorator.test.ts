@@ -53,24 +53,3 @@ test("it can specify tags in method parameters", ({ container }) => {
   expect(serviceTag.services).not.toBeNullable();
   expect(serviceTag.services.length).toBe(2);
 });
-
-/**
-TODO:
-
-        [Test]
-        public void ItCanSpecifyTagsInMethodParameters()
-        {
-            container.Register<SimpleService>().WithTag("example");
-            container.Register<AnotherService>().WithTag("example");
-
-            container.Register<ServiceWithTagMethodParameters>();
-
-            var service = container.Resolve<ServiceWithTagMethodParameters>();
-
-            Assert.NotNull(service.Simple);
-            Assert.AreEqual(2, service.Simple.Count);
-        }
-
-        // TODO: Make sure TaggedService can never be auto resolved !!
-        // Maybe even a guard feature
-	*/
