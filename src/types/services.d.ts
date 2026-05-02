@@ -32,6 +32,7 @@ export type DucktionDependencies = Array<{
   token: string;
   concrete?: Implementation;
   id?: string;
+  tag?: string;
 }>;
 
 /**

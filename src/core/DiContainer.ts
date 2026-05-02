@@ -439,13 +439,18 @@ class DiContainer {
     parameters: Map<string, unknown>,
   ): unknown[] {
     return dependencies.map((dep): any => {
-      const token = dep.id ? `${dep.token}___${dep.id}` : dep.token;
-
       // If parameters were set specifically, apply them here and don't use the
       // service container.
       if (parameters.has(dep.name)) {
         return parameters.get(dep.name);
       }
+
+      // Tag-based dependency: resolve all services with the given tag as an array
+      if (dep.tag) {
+        return [...this.getTagged(dep.tag)];
+      }
+
+      const token = dep.id ? `${dep.token}___${dep.id}` : dep.token;
 
       // If the token is already in the dependencyChain, we have a circular dependency
       if (dependencyChain.includes(token)) {
