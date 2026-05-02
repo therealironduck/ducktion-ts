@@ -57,14 +57,11 @@ function isScalarType(typeNode: ts.TypeNode): boolean {
   return false;
 }
 
-/**
- * Returns the string value of a `@id("foo")` decorator on a method parameter,
- * or undefined if no such decorator is present (or `id` is not imported from our package).
- */
-function extractIdDecoratorValue(
+function extractDecoratorStringArg(
   param: ts.ParameterDeclaration,
   sourceFile: ts.SourceFile,
   importedNames: Set<string>,
+  decoratorName: string,
 ): string | undefined {
   const decorators = ts.getDecorators(param);
   if (!decorators) return undefined;
@@ -73,7 +70,7 @@ function extractIdDecoratorValue(
     if (!ts.isCallExpression(decorator.expression)) continue;
     const callee = decorator.expression.expression;
     if (!ts.isIdentifier(callee)) continue;
-    if (callee.text !== "id" || !importedNames.has("id")) continue;
+    if (callee.text !== decoratorName || !importedNames.has(decoratorName)) continue;
 
     const args = decorator.expression.arguments;
     if (args.length !== 1) continue;
@@ -83,6 +80,22 @@ function extractIdDecoratorValue(
   }
 
   return undefined;
+}
+
+function extractIdDecoratorValue(
+  param: ts.ParameterDeclaration,
+  sourceFile: ts.SourceFile,
+  importedNames: Set<string>,
+): string | undefined {
+  return extractDecoratorStringArg(param, sourceFile, importedNames, "id");
+}
+
+function extractResolveTagsDecoratorValue(
+  param: ts.ParameterDeclaration,
+  sourceFile: ts.SourceFile,
+  importedNames: Set<string>,
+): string | undefined {
+  return extractDecoratorStringArg(param, sourceFile, importedNames, "resolveTags");
 }
 
 export const transformDecoratorMethods = (code: string, id: string): string => {
@@ -130,6 +143,12 @@ export const transformDecoratorMethods = (code: string, id: string): string => {
 
           const deps = member.parameters.map((param) => {
             const name = ts.isIdentifier(param.name) ? param.name.text : "";
+            const resolveTag = extractResolveTagsDecoratorValue(param, sourceFile, importedNames);
+
+            if (resolveTag !== undefined) {
+              return `{ name: ${JSON.stringify(name)}, token: "ducktion__tag", tag: ${JSON.stringify(resolveTag)} }`;
+            }
+
             const paramId = extractIdDecoratorValue(param, sourceFile, importedNames);
 
             if (!param.type || isScalarType(param.type)) {
