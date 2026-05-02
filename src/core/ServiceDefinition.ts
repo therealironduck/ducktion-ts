@@ -43,6 +43,12 @@ class ServiceDefinition {
    */
   private _parameters: Map<string, unknown> = new Map();
 
+  /**
+   * Any service can have multiple tags. Tese can be used with the `@resolveTags` decorator to
+   * fetch all services with a given tag.
+   */
+  private _tags: string[] = [];
+
   public constructor(serviceType: Implementation) {
     this.serviceType = serviceType;
   }
@@ -189,6 +195,44 @@ class ServiceDefinition {
    */
   public removeParameter(name: string): ServiceDefinition {
     this._parameters.delete(name);
+
+    return this;
+  }
+
+  public get tags(): Readonly<string[]> {
+    return this._tags;
+  }
+
+  /**
+   * Add a new tag to the service. See `ResolveTags` to see how it can be used.
+   */
+  public withTag(tag: string): ServiceDefinition {
+    this._tags.push(tag);
+
+    return this;
+  }
+
+  /**
+   * Alias for `withTag`
+   */
+  public addTag(tag: string): ServiceDefinition {
+    return this.withTag(tag);
+  }
+
+  /**
+   * Add multiple tags to the service.
+   */
+  public withTags(...tags: string[]): ServiceDefinition {
+    this._tags.push(...tags);
+
+    return this;
+  }
+
+  /**
+   * Remove a specific tag from the service.
+   */
+  public removeTag(tag: string): ServiceDefinition {
+    this._tags = this._tags.filter((t) => t !== tag);
 
     return this;
   }

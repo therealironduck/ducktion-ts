@@ -541,6 +541,19 @@ class DiContainer {
 
     return this.reinitialize();
   }
+
+  /**
+   * Return all resolved services based on the services that currently
+   * have the given tag. It uses a generator and only resolves the services
+   * when accessing them.
+   */
+  public *getTagged<T>(tag: string): Generator<T, void, unknown> {
+    for (let [token, definition] of this.services) {
+      if (definition.tags.includes(tag)) {
+        yield this.innerResolve(token, []) as T;
+      }
+    }
+  }
 }
 
 export default DiContainer;

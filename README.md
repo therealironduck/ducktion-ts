@@ -4,18 +4,18 @@ A simple, flexible dependency injection solution for Typescript!
 
 ## Features
 
-- tbd
-
-## Roadmap
-
 - Dependency Injection container which can be used to register and resolve services
 - Services can be registered with IDs
 - Lazy and non-lazy services
 - Singleton and transient services
 - Auto Resolving of dependencies
 - Dynamic instantiation of services with callbacks
-- Resolving of dependencies using the [Resolve] attribute
-- Tagging services and receiving all tagged services
+- Resolving of dependencies using the `@resolve` and `@id` decorators
+
+## Roadmap
+
+- Rollup & Webpack, etc.
+- Performance optimization (auto resolve -> skip node_modules, configurable)
 
 ## Installation
 
