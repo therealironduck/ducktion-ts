@@ -7,6 +7,7 @@ import type {
   DucktionDependencies,
   DucktionResolveParameters,
   DucktionResolveMethods,
+  DucktionResolveTagsParameters,
 } from "./services";
 
 export type {
@@ -20,4 +21,5 @@ export type {
   DucktionDependencies,
   DucktionResolveParameters,
   DucktionResolveMethods,
+  DucktionResolveTagsParameters,
 };

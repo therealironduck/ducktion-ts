@@ -1,6 +1,26 @@
-import { test } from "../../base";
+import { expect } from "vitest";
 
-test("test", () => {});
+import { test } from "../../base";
+import { ServiceWithLogger } from "../../stubs/ServiceWithLogger";
+import SimpleService, { SecondSimpleService } from "../../stubs/SimpleService";
+import { ServiceWithPublicTagged } from "../../stubs/TaggedServices";
+
+test("it resolves any public fields with a resolve tags attribute when resolving the main service", ({ container }) => {
+  container.__registerAs("SimpleService", SimpleService).withTag("example");
+  container.__registerAs("ServiceWithLogger", ServiceWithLogger).withTag("example");
+  container.__registerAs("SecondSimpleService", SecondSimpleService).withTag("example");
+
+  container.__registerAs("ServiceWithPublicTagged", ServiceWithPublicTagged);
+
+  const service = container.__resolveByToken("ServiceWithPublicTagged");
+  expect(service).toBeInstanceOf(ServiceWithPublicTagged);
+
+  const serviceTagged = service as ServiceWithPublicTagged;
+  expect(serviceTagged.services).not.toBeNullable();
+  expect(serviceTagged.another).toBeInstanceOf(SecondSimpleService);
+
+  expect(serviceTagged.services.length).toBe(3);
+});
 
 /**
 TODO:

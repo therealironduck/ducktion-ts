@@ -4,6 +4,7 @@ import type {
   DucktionDependencies,
   DucktionResolveMethods,
   DucktionResolveParameters,
+  DucktionResolveTagsParameters,
   Implementation,
   LazyMode,
   SingletonMode,
@@ -399,21 +400,27 @@ class DiContainer {
   }
 
   /**
-   * Resolve any @resolve decorator usages in the given instance. This will resolve all
-   * properties which have the @resolve decorator, as well as all methods which
-   * contain the @resolve decorator.
+   * Resolve any `@resolve` and `@resolveTags` decorator usages in the given instance.
+   * This will resolve all properties which have the @resolve decorator, all methods
+   * which contain the @resolve decorator and all properties that have the
+   * `@resolveTags` decorator.
    */
   public resolveDependencies(instance: object, dependencyChain?: string[]) {
     dependencyChain ??= [];
 
     const resolveProperties = getStatic<DucktionResolveParameters>(instance, "__ducktionResolveProperties");
     const resolveMethods = getStatic<DucktionResolveMethods>(instance, "__ducktionResolveMethods");
+    const resolveTagProperties = getStatic<DucktionResolveTagsParameters>(instance, "__ducktionResolveTagProperties");
 
     const obj = instance as unknown as Record<string, any>;
 
     for (const prop of resolveProperties ?? []) {
       const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
       obj[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
+    }
+
+    for (const prop of resolveTagProperties ?? []) {
+      obj[prop.propertyKey] = [...this.getTagged(prop.tag)];
     }
 
     // Call @resolve-decorated methods with their resolved dependencies
