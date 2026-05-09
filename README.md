@@ -16,6 +16,7 @@ A simple, flexible dependency injection solution for Typescript!
 
 - Rollup & Webpack, etc.
 - Performance optimization (auto resolve -> skip node_modules, configurable)
+- Docs
 
 ## Installation
 

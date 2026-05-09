@@ -1,6 +1,7 @@
 import { expect, describe } from "vitest";
 
-import { test } from "../base";
+import { ServiceDefinition } from "../../src";
+import { test, testWithAutoResolve } from "../base";
 import SimpleService from "../stubs/SimpleService";
 
 test("it creates a service definition with default values", ({ container }) => {
@@ -11,6 +12,10 @@ test("it creates a service definition with default values", ({ container }) => {
   expect(definition.callback).toBeNullable();
   expect(definition.lazyMode).toBeNullable();
   expect(definition.singletonMode).toBeNullable();
+});
+
+testWithAutoResolve("it prevents service definitions from being auto resolved", ({ container }) => {
+  expect(() => container.__resolveWithType("ServiceDefinition", ServiceDefinition)).toThrow();
 });
 
 describe("instance", () => {
