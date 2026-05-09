@@ -22,6 +22,7 @@
     "./rolldown": "./dist/rolldown.mjs",
     "./rollup": "./dist/rollup.mjs",
     "./webpack": "./dist/webpack.mjs",
+    "./esbuild": "./dist/esbuild.mjs",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -41,6 +42,7 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "7.0.0-dev.20260508.1",
+    "esbuild": "^0.28.0",
     "memfs": "^4.57.2",
     "oxfmt": "^0.48.0",
     "oxlint": "^1.59.0",
