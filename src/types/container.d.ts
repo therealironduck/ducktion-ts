@@ -1,4 +1,4 @@
-import type { DiContainer } from "../core/DiContainer";
+import type DiContainer from "../core/DiContainer";
 import type { LogLevel } from "../core/DucktionLogger";
 import type { SingletonMode, LazyMode } from "./services";
 
