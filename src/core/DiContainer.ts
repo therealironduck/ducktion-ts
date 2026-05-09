@@ -577,7 +577,7 @@ class DiContainer {
    */
   public *getTagged<T>(tag: string): Generator<T, void, unknown> {
     for (let [token, definition] of this.services) {
-      if (definition.tags.includes(tag)) {
+      if (definition.tags.has(tag)) {
         yield this.innerResolve(token, new Set()) as T;
       }
     }

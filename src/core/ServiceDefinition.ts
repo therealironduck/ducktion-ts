@@ -50,7 +50,7 @@ class ServiceDefinition {
    * Any service can have multiple tags. Tese can be used with the `@resolveTags` decorator to
    * fetch all services with a given tag.
    */
-  private _tags: string[] = [];
+  private _tags: Set<string> = new Set();
 
   public constructor(serviceType: Implementation) {
     this.serviceType = serviceType;
@@ -202,7 +202,7 @@ class ServiceDefinition {
     return this;
   }
 
-  public get tags(): Readonly<string[]> {
+  public get tags(): ReadonlySet<string> {
     return this._tags;
   }
 
@@ -210,7 +210,7 @@ class ServiceDefinition {
    * Add a new tag to the service. See `ResolveTags` to see how it can be used.
    */
   public withTag(tag: string): ServiceDefinition {
-    this._tags.push(tag);
+    this._tags.add(tag);
 
     return this;
   }
@@ -226,7 +226,7 @@ class ServiceDefinition {
    * Add multiple tags to the service.
    */
   public withTags(...tags: string[]): ServiceDefinition {
-    this._tags.push(...tags);
+    for (const tag of tags) this._tags.add(tag);
 
     return this;
   }
@@ -235,7 +235,7 @@ class ServiceDefinition {
    * Remove a specific tag from the service.
    */
   public removeTag(tag: string): ServiceDefinition {
-    this._tags = this._tags.filter((t) => t !== tag);
+    this._tags.delete(tag);
 
     return this;
   }
