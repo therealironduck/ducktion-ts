@@ -15,6 +15,8 @@ import DucktionLogger, { DUCKTION_LOGGER_TOKEN, LogLevel } from "./DucktionLogge
 import ServiceDefinition from "./ServiceDefinition";
 import { getStatic } from "./utils";
 
+const EMPTY_PARAMETERS: Map<string, unknown> = new Map();
+
 /**
  * This is the core component of this whole package. It holds a list of all registered services
  * and their concrete implementations. It also stores all resolved instances as singletons.
@@ -329,7 +331,7 @@ class DiContainer {
       // If the service is in singleton mode, we will store the instance
       // If no singleton mode is specified, we will use the default singleton mode
       if ((definition.singletonMode ?? this.defaultSingletonMode) === "singleton") {
-        this.storeAsSingleton(token, instance, definition.serviceType);
+        this.storeAsSingleton(token, instance, definition.serviceType, definition);
       }
 
       // Anyway, return the resolved instance
@@ -384,7 +386,7 @@ class DiContainer {
         (!isAutoResolved && (definition?.singletonMode ?? "singleton") === this.defaultSingletonMode);
 
       if (storeSingleton) {
-        this.storeAsSingleton(token, instance, serviceType);
+        this.storeAsSingleton(token, instance, serviceType, definition);
       }
 
       this.logger?.log(LogLevel.debug, `Resolved service: ${token} => ${serviceType.name}`);
@@ -400,8 +402,12 @@ class DiContainer {
    * If the type is already registered, it will override the instance.
    * Otherwise it will create a new service definition.
    */
-  private storeAsSingleton(token: string, instance: object, concreteType: Implementation): void {
-    const definition = this.services.get(token);
+  private storeAsSingleton(
+    token: string,
+    instance: object,
+    concreteType: Implementation,
+    definition: ServiceDefinition | undefined,
+  ): void {
     if (definition) {
       definition.setInstance(instance);
 
@@ -437,7 +443,7 @@ class DiContainer {
 
     // Call @resolve-decorated methods with their resolved dependencies
     for (const method of resolveMethods ?? []) {
-      obj[method.methodKey](...this.resolveParameters(method.dependencies, dependencyChain, new Map()));
+      obj[method.methodKey](...this.resolveParameters(method.dependencies, dependencyChain, EMPTY_PARAMETERS));
     }
   }
 
