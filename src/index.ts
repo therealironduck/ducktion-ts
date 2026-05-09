@@ -1,7 +1,7 @@
-import { id, resolve, resolveTags } from "./core/decorators";
+import { id, resolve, resolveTags, preventAutoResolve } from "./core/decorators";
 import DiContainer from "./core/DiContainer";
 import DucktionLogger, { LogLevel } from "./core/DucktionLogger";
 import ServiceDefinition from "./core/ServiceDefinition";
 
-export { DiContainer, ServiceDefinition, DucktionLogger, LogLevel, id, resolve, resolveTags };
+export { DiContainer, ServiceDefinition, DucktionLogger, LogLevel, id, resolve, resolveTags, preventAutoResolve };
 export default DiContainer;

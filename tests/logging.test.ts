@@ -1,10 +1,11 @@
 import { describe, expect } from "vitest";
 
-import { LogLevel } from "../src/core/DucktionLogger";
-import { fakeLogger, test } from "./base";
+import DucktionLogger, { LogLevel } from "../src/core/DucktionLogger";
+import { fakeLogger, test, testWithAutoResolve } from "./base";
 import { ExampleConfigurator } from "./stubs/ExampleConfigurator";
 import { RecursiveAService, RecursiveBService } from "./stubs/RecursiveServices";
 import ScalarService from "./stubs/ScalarService";
+import { ServiceWithNoAutoResolve } from "./stubs/ServiceWithNoAutoResolve";
 import SimpleService, { SecondSimpleService, BaseSimpleService } from "./stubs/SimpleService";
 
 describe("general logs", () => {
@@ -132,5 +133,25 @@ describe("resolve", () => {
     expect(() => container.__resolveByToken("ScalarService")).toThrow();
 
     logger.assertHasMessage(LogLevel.error, "Service cant resolve parameter, because it is a scalar value");
+  });
+
+  testWithAutoResolve("it logs an error if any service is being prevented from auto resolving", ({ container }) => {
+    const logger = fakeLogger(container);
+
+    expect(() => container.__resolveWithType("ServiceWithNoAutoResolve", ServiceWithNoAutoResolve)).toThrow();
+
+    logger.assertHasMessage(
+      LogLevel.error,
+      "Service is restricted from being auto resolved. Explicitly register it instead.",
+    );
+  });
+});
+
+describe("service", () => {
+  testWithAutoResolve("it prevents the ducktion logger from being auto resolved", ({ container }) => {
+    // @ts-expect-error `services` is private and in a real situation this could never happen
+    container.services.clear();
+
+    expect(() => container.__resolveWithType("DucktionLogger", DucktionLogger)).toThrow();
   });
 });
