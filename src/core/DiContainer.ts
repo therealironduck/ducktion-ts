@@ -339,6 +339,17 @@ class DiContainer {
       return instance;
     }
 
+    // If the service is not registered and auto resolved is enabled, check if the service
+    // is allowed to be auto resolved.
+    if (!definition && concreteType?.prototype.__ducktionPreventAutoResolve === true) {
+      this.logger?.log(
+        LogLevel.error,
+        "Service is restricted from being auto resolved. Explicitly register it instead.",
+      );
+
+      throw new Error("Service is restricted from being auto resolved. Explicitly register it instead.");
+    }
+
     // Here we check the actual type we need to resolve.
     // If the service isn't registered we just take the original type given. Otherwise we take the
     // registered type.

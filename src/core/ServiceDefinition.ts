@@ -1,9 +1,12 @@
 import type { Implementation, LazyMode, SingletonMode } from "../types";
 
+import { preventAutoResolve } from "./decorators";
+
 /**
  * This class hold all the information needed to resolve a service.
  * Most variables can't be set directly by the user, but only by the container.
  */
+@preventAutoResolve
 class ServiceDefinition {
   /**
    * The type of the service. Or to be more precice it has to be an instantiable

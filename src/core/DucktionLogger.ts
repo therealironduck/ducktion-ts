@@ -1,3 +1,5 @@
+import { preventAutoResolve } from "./decorators";
+
 export const DUCKTION_LOGGER_TOKEN = "@therealironduck/ducktion-ts#DucktionLogger";
 
 export const LogLevel = {
@@ -16,6 +18,7 @@ const LEVEL_LABEL: Record<LogLevel, string> = {
   [LogLevel.disabled]: "Disabled",
 };
 
+@preventAutoResolve
 export default class DucktionLogger {
   private logLevel: LogLevel = LogLevel.error;
 
