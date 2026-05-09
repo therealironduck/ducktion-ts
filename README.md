@@ -14,9 +14,10 @@ A simple, flexible dependency injection solution for Typescript!
 
 ## Roadmap
 
-- Rollup & Webpack, etc.
 - Performance optimization (auto resolve -> skip node_modules, configurable)
 - Docs
+
+> **Dev note (rollup):** The rollup plugin exists (`/rollup` export) but has a known ordering issue. `@rollup/plugin-typescript` uses a `load` hook, which runs before any `transform` hook regardless of plugin array order. This means the ducktion plugin currently sees already-type-stripped code in real rollup projects, so `register<T>()` type arguments are invisible to it. Fix: move the ducktion transform logic into a `load` hook so it processes files first.
 
 ## Installation
 
