@@ -37,9 +37,6 @@ class DiContainer {
   static get singleton(): DiContainer {
     DiContainer._singleton ??= new DiContainer();
 
-    // TODO: Do i want that?
-    DiContainer._singleton.reinitialize();
-
     return DiContainer._singleton;
   }
 
@@ -280,7 +277,7 @@ class DiContainer {
   public __resolveByToken(token: string, id?: string): object {
     if (id) token += `___${id}`;
 
-    return this.innerResolve(token, []);
+    return this.innerResolve(token, new Set());
   }
 
   /**
@@ -296,14 +293,14 @@ class DiContainer {
   public __resolveWithType(token: string, concreteType: Implementation | undefined, id?: string): object {
     if (id) token += `___${id}`;
 
-    return this.innerResolve(token, [], concreteType);
+    return this.innerResolve(token, new Set(), concreteType);
   }
 
   /**
    * Inner logic to resolve a component. This method handles the recursive resolving of all
    * parameters of the constructor. Also it checks for circular dependencies.
    */
-  private innerResolve(token: string, dependencyChain: string[], concreteType?: Implementation): object {
+  private innerResolve(token: string, dependencyChain: Set<string>, concreteType?: Implementation): object {
     // If we try to resolve scalar values (number, string, etc.) we just fail instantly
     if (token === SCALAR_TOKEN) {
       this.logger?.log(LogLevel.error, "Service cant resolve parameter, because it is a scalar value");
@@ -360,7 +357,7 @@ class DiContainer {
     }
 
     // Add the current token to the dependency chain
-    dependencyChain.push(token);
+    dependencyChain.add(token);
 
     // Resolve all dependencies recursively of the constructor
     const instance = new serviceType(
@@ -416,8 +413,8 @@ class DiContainer {
    * which contain the @resolve decorator and all properties that have the
    * `@resolveTags` decorator.
    */
-  public resolveDependencies(instance: object, dependencyChain?: string[]) {
-    dependencyChain ??= [];
+  public resolveDependencies(instance: object, dependencyChain?: Set<string>) {
+    dependencyChain ??= new Set();
 
     const resolveProperties = getStatic<DucktionResolveParameters>(instance, "__ducktionResolveProperties");
     const resolveMethods = getStatic<DucktionResolveMethods>(instance, "__ducktionResolveMethods");
@@ -427,7 +424,7 @@ class DiContainer {
 
     for (const prop of resolveProperties ?? []) {
       const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
-      obj[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
+      obj[prop.propertyKey] = this.innerResolve(token, new Set(dependencyChain), prop.concrete);
     }
 
     for (const prop of resolveTagProperties ?? []) {
@@ -436,7 +433,7 @@ class DiContainer {
 
     // Call @resolve-decorated methods with their resolved dependencies
     for (const method of resolveMethods ?? []) {
-      obj[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain], new Map()));
+      obj[method.methodKey](...this.resolveParameters(method.dependencies, new Set(dependencyChain), new Map()));
     }
   }
 
@@ -446,7 +443,7 @@ class DiContainer {
    */
   private resolveParameters(
     dependencies: DucktionDependencies,
-    dependencyChain: string[],
+    dependencyChain: Set<string>,
     parameters: Map<string, unknown>,
   ): unknown[] {
     return dependencies.map((dep): any => {
@@ -464,13 +461,13 @@ class DiContainer {
       const token = dep.id ? `${dep.token}___${dep.id}` : dep.token;
 
       // If the token is already in the dependencyChain, we have a circular dependency
-      if (dependencyChain.includes(token)) {
+      if (dependencyChain.has(token)) {
         this.logger?.log(LogLevel.error, `Circular dependency detected for parameter: ${dep.name}`);
         throw new Error(`Circular dependency detected for parameter '${dep.name}'`);
       }
 
       // Add the token to the dependency chain
-      dependencyChain.push(token);
+      dependencyChain.add(token);
 
       // Resolve the parameter. If any error occurs, we wrap it in another error and bubble it up
       try {
@@ -573,7 +570,7 @@ class DiContainer {
   public *getTagged<T>(tag: string): Generator<T, void, unknown> {
     for (let [token, definition] of this.services) {
       if (definition.tags.includes(tag)) {
-        yield this.innerResolve(token, []) as T;
+        yield this.innerResolve(token, new Set()) as T;
       }
     }
   }
