@@ -1,5 +1,6 @@
 import ts from "typescript";
 
+import { collectSourceContext, type SourceContext } from "./collectImports";
 import { transformAbstractClasses } from "./transformAbstractClasses";
 import { transformConstructorDependencies } from "./transformConstructorDependencies";
 import { transformDecoratorMethods } from "./transformDecoratorMethods";
@@ -19,27 +20,28 @@ import { transformGenericCalls } from "./transformGenericCalls";
  *  5. Injects `static __ducktionResolveMethods = [...]` for methods decorated
  *     with bare `@resolve` so parameter types survive type erasure.
  *
- * The source file is parsed once and the AST is reused across stages. A re-parse
- * only happens when a stage actually modifies the code, keeping the AST in sync
- * for the next stage without redundant work.
+ * The source file is parsed once and import-collection results are computed once
+ * and shared across all stages. A re-parse only happens when a stage actually
+ * modifies the code (transforms never touch import declarations, so the context
+ * stays valid even after a re-parse).
  */
 export const transform = (code: string, id: string): string => {
   let current = code;
-  let sourceFile = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
+  let sf = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
+  const ctx: SourceContext = collectSourceContext(sf);
 
-  const apply = (fn: (code: string, id: string, sf: ts.SourceFile) => string): void => {
-    const next = fn(current, id, sourceFile);
+  function maybeReparse(next: string): void {
     if (next !== current) {
       current = next;
-      sourceFile = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
+      sf = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
     }
-  };
+  }
 
-  apply(transformGenericCalls);
-  apply(transformAbstractClasses);
-  apply(transformConstructorDependencies);
-  apply(transformDecoratorProperties);
-  apply(transformDecoratorMethods);
+  maybeReparse(transformGenericCalls(current, id, sf, ctx));
+  maybeReparse(transformAbstractClasses(current, id, sf));
+  maybeReparse(transformConstructorDependencies(current, id, sf, ctx));
+  maybeReparse(transformDecoratorProperties(current, id, sf, ctx));
+  maybeReparse(transformDecoratorMethods(current, id, sf, ctx));
 
   return current;
 };

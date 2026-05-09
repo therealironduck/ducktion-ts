@@ -26,14 +26,7 @@
 import ts from "typescript";
 
 import { buildToken } from "./buildToken";
-import {
-  collectEnumNames,
-  collectImportedNames,
-  collectInterfaceNames,
-  collectLocalDeclarationNames,
-  collectTypeImportMap,
-  collectTypeOnlyImports,
-} from "./collectImports";
+import { collectSourceContext, type SourceContext } from "./collectImports";
 
 export const SCALAR_TOKEN = "ducktion__scalar";
 
@@ -103,15 +96,9 @@ export const transformConstructorDependencies = (
   code: string,
   id: string,
   sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  ctx: SourceContext = collectSourceContext(sourceFile),
 ): string => {
-  const importMap = collectTypeImportMap(sourceFile);
-  const typeOnlyImports = collectTypeOnlyImports(sourceFile);
-  const interfaceNames = collectInterfaceNames(sourceFile);
-  const enumNames = collectEnumNames(sourceFile);
-
-  const rawImportedNames = collectImportedNames(sourceFile);
-  const localDeclarations = collectLocalDeclarationNames(sourceFile);
-  const importedNames = new Set([...rawImportedNames].filter((n) => !localDeclarations.has(n)));
+  const { importMap, typeOnlyImports, interfaceNames, enumNames, filteredImportedNames: importedNames } = ctx;
 
   const insertions: Array<{ pos: number; text: string }> = [];
 

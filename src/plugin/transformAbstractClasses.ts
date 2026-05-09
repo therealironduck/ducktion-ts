@@ -22,7 +22,6 @@ export const transformAbstractClasses = (
   id: string,
   sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
 ): string => {
-
   const insertions: Array<{ pos: number; text: string }> = [];
 
   function visit(node: ts.Node) {

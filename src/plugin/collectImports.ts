@@ -200,3 +200,32 @@ export function collectTypeImportMap(sourceFile: ts.SourceFile): Map<string, str
 
   return map;
 }
+
+export type SourceContext = {
+  importedNames: Set<string>;
+  filteredImportedNames: Set<string>;
+  diBindings: Set<string>;
+  localDeclarations: Set<string>;
+  importMap: Map<string, string>;
+  typeOnlyImports: Set<string>;
+  interfaceNames: Set<string>;
+  enumNames: Set<string>;
+};
+
+export function collectSourceContext(sourceFile: ts.SourceFile): SourceContext {
+  const importedNames = collectImportedNames(sourceFile);
+  const localDeclarations = collectLocalDeclarationNames(sourceFile);
+  const filteredImportedNames = new Set([...importedNames].filter((n) => !localDeclarations.has(n)));
+  const diBindings = collectDiBindings(sourceFile, importedNames);
+
+  return {
+    importedNames,
+    filteredImportedNames,
+    diBindings,
+    localDeclarations,
+    importMap: collectTypeImportMap(sourceFile),
+    typeOnlyImports: collectTypeOnlyImports(sourceFile),
+    interfaceNames: collectInterfaceNames(sourceFile),
+    enumNames: collectEnumNames(sourceFile),
+  };
+}
