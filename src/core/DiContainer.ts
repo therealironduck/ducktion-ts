@@ -356,39 +356,43 @@ class DiContainer {
       throw new Error(`Service is not registered`);
     }
 
-    // Add the current token to the dependency chain
+    // Add the current token to the dependency chain; remove it in finally so that
+    // after this frame completes, sibling services are not blocked by it.
     dependencyChain.add(token);
+    try {
+      // Resolve all dependencies recursively of the constructor
+      const instance = new serviceType(
+        ...this.resolveParameters(
+          serviceType.__ducktionDependencies ?? [],
+          dependencyChain,
+          definition?.parameters ?? new Map(),
+        ),
+      );
 
-    // Resolve all dependencies recursively of the constructor
-    const instance = new serviceType(
-      ...this.resolveParameters(
-        serviceType.__ducktionDependencies ?? [],
-        dependencyChain,
-        definition?.parameters ?? new Map(),
-      ),
-    );
+      // And resolve all dependencies that occur because of the Resolve decorator
+      this.resolveDependencies(instance, dependencyChain);
 
-    // And resolve all dependencies that occur because of the Resolve decorator
-    this.resolveDependencies(instance, dependencyChain);
+      const isAutoResolved = definition === undefined;
 
-    const isAutoResolved = definition === undefined;
+      // This is a complex check to determine if the resolved service should be stored as a singleton
+      // Basically it will be stored if:
+      // (a) auto resolve is enabled and the auto resolve singleton mode is set to singleton
+      // or (b) auto resolve is disabled and the service singleton mode is set to singleton
+      // If in case (b) the service singleton mode is not set, we will use the default singleton mode
+      const storeSingleton =
+        (isAutoResolved && this.autoResolveSingletonMode === "singleton") ||
+        (!isAutoResolved && (definition?.singletonMode ?? "singleton") === this.defaultSingletonMode);
 
-    // This is a complex check to determine if the resolved service should be stored as a singleton
-    // Basically it will be stored if:
-    // (a) auto resolve is enabled and the auto resolve singleton mode is set to singleton
-    // or (b) auto resolve is disabled and the service singleton mode is set to singleton
-    // If in case (b) the service singleton mode is not set, we will use the default singleton mode
-    const storeSingleton =
-      (isAutoResolved && this.autoResolveSingletonMode === "singleton") ||
-      (!isAutoResolved && (definition?.singletonMode ?? "singleton") === this.defaultSingletonMode);
+      if (storeSingleton) {
+        this.storeAsSingleton(token, instance, serviceType);
+      }
 
-    if (storeSingleton) {
-      this.storeAsSingleton(token, instance, serviceType);
+      this.logger?.log(LogLevel.debug, `Resolved service: ${token} => ${serviceType.name}`);
+
+      return instance;
+    } finally {
+      dependencyChain.delete(token);
     }
-
-    this.logger?.log(LogLevel.debug, `Resolved service: ${token} => ${serviceType.name}`);
-
-    return instance;
   }
 
   /**
@@ -424,7 +428,7 @@ class DiContainer {
 
     for (const prop of resolveProperties ?? []) {
       const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
-      obj[prop.propertyKey] = this.innerResolve(token, new Set(dependencyChain), prop.concrete);
+      obj[prop.propertyKey] = this.innerResolve(token, dependencyChain, prop.concrete);
     }
 
     for (const prop of resolveTagProperties ?? []) {
@@ -433,7 +437,7 @@ class DiContainer {
 
     // Call @resolve-decorated methods with their resolved dependencies
     for (const method of resolveMethods ?? []) {
-      obj[method.methodKey](...this.resolveParameters(method.dependencies, new Set(dependencyChain), new Map()));
+      obj[method.methodKey](...this.resolveParameters(method.dependencies, dependencyChain, new Map()));
     }
   }
 
@@ -466,10 +470,8 @@ class DiContainer {
         throw new Error(`Circular dependency detected for parameter '${dep.name}'`);
       }
 
-      // Add the token to the dependency chain
-      dependencyChain.add(token);
-
       // Resolve the parameter. If any error occurs, we wrap it in another error and bubble it up
+      // innerResolve owns adding/removing the token from the chain.
       try {
         return this.innerResolve(token, dependencyChain, dep.concrete);
       } catch (error) {
