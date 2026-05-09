@@ -30,66 +30,8 @@
 
 import ts from "typescript";
 
-import { buildToken } from "./buildToken";
 import { collectSourceContext, type SourceContext } from "./collectImports";
-import { SCALAR_TOKEN } from "./transformConstructorDependencies";
-
-const SCALAR_KINDS = new Set([
-  ts.SyntaxKind.StringKeyword,
-  ts.SyntaxKind.NumberKeyword,
-  ts.SyntaxKind.BooleanKeyword,
-  ts.SyntaxKind.BigIntKeyword,
-  ts.SyntaxKind.SymbolKeyword,
-  ts.SyntaxKind.NullKeyword,
-  ts.SyntaxKind.UndefinedKeyword,
-]);
-
-function isScalarType(typeNode: ts.TypeNode): boolean {
-  if (SCALAR_KINDS.has(typeNode.kind)) return true;
-  if (ts.isLiteralTypeNode(typeNode) && typeNode.literal.kind === ts.SyntaxKind.NullKeyword) return true;
-  return false;
-}
-
-function extractDecoratorStringArg(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-  decoratorName: string,
-): string | undefined {
-  const decorators = ts.getDecorators(param);
-  if (!decorators) return undefined;
-
-  for (const decorator of decorators) {
-    if (!ts.isCallExpression(decorator.expression)) continue;
-    const callee = decorator.expression.expression;
-    if (!ts.isIdentifier(callee)) continue;
-    if (callee.text !== decoratorName || !importedNames.has(decoratorName)) continue;
-
-    const args = decorator.expression.arguments;
-    if (args.length !== 1) continue;
-    const arg = args[0];
-    if (!ts.isStringLiteral(arg)) continue;
-    return arg.text;
-  }
-
-  return undefined;
-}
-
-function extractIdDecoratorValue(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-): string | undefined {
-  return extractDecoratorStringArg(param, sourceFile, importedNames, "id");
-}
-
-function extractResolveTagsDecoratorValue(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-): string | undefined {
-  return extractDecoratorStringArg(param, sourceFile, importedNames, "resolveTags");
-}
+import { buildParamEntry } from "./transformHelpers";
 
 export const transformDecoratorMethods = (
   code: string,
@@ -137,33 +79,18 @@ export const transformDecoratorMethods = (
           const methodName = ts.isIdentifier(member.name) ? member.name.text : null;
           if (!methodName) continue;
 
-          const deps = member.parameters.map((param) => {
-            const name = ts.isIdentifier(param.name) ? param.name.text : "";
-            const resolveTag = extractResolveTagsDecoratorValue(param, sourceFile, importedNames);
-
-            if (resolveTag !== undefined) {
-              return `{ name: ${JSON.stringify(name)}, token: "ducktion__tag", tag: ${JSON.stringify(resolveTag)} }`;
-            }
-
-            const paramId = extractIdDecoratorValue(param, sourceFile, importedNames);
-
-            if (!param.type || isScalarType(param.type)) {
-              const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
-              return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(SCALAR_TOKEN)}, concrete: undefined${idPart} }`;
-            }
-
-            const typeName = param.type.getText(sourceFile);
-            const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
-            const token = buildToken(typeName, importMap, id);
-
-            const isConcrete =
-              !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
-
-            const concrete = isConcrete ? bareTypeName : "undefined";
-            const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
-
-            return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(token)}, concrete: ${concrete}${idPart} }`;
-          });
+          const deps = member.parameters.map((param) =>
+            buildParamEntry(
+              param,
+              sourceFile,
+              importedNames,
+              importMap,
+              id,
+              typeOnlyImports,
+              interfaceNames,
+              enumNames,
+            ),
+          );
 
           methodEntries.push(`{ methodKey: ${JSON.stringify(methodName)}, dependencies: [${deps.join(", ")}] }`);
         }

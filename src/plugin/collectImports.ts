@@ -116,19 +116,31 @@ export function collectTypeOnlyImports(sourceFile: ts.SourceFile): Set<string> {
 }
 
 /**
- * Collects the names of all interface declarations in the source file.
- * Used to catch same-file interfaces passed to register<T>().
+ * Collects names of all interface and enum declarations in a single AST traversal.
  */
-export function collectInterfaceNames(sourceFile: ts.SourceFile): Set<string> {
-  const names = new Set<string>();
+export function collectInterfaceAndEnumNames(sourceFile: ts.SourceFile): {
+  interfaceNames: Set<string>;
+  enumNames: Set<string>;
+} {
+  const interfaceNames = new Set<string>();
+  const enumNames = new Set<string>();
 
   function visit(node: ts.Node) {
-    if (ts.isInterfaceDeclaration(node)) names.add(node.name.text);
+    if (ts.isInterfaceDeclaration(node)) interfaceNames.add(node.name.text);
+    else if (ts.isEnumDeclaration(node)) enumNames.add(node.name.text);
     ts.forEachChild(node, visit);
   }
 
   visit(sourceFile);
-  return names;
+  return { interfaceNames, enumNames };
+}
+
+/**
+ * Collects the names of all interface declarations in the source file.
+ * Used to catch same-file interfaces passed to register<T>().
+ */
+export function collectInterfaceNames(sourceFile: ts.SourceFile): Set<string> {
+  return collectInterfaceAndEnumNames(sourceFile).interfaceNames;
 }
 
 /**
@@ -136,15 +148,7 @@ export function collectInterfaceNames(sourceFile: ts.SourceFile): Set<string> {
  * Used to catch same-file enums passed to register<T>().
  */
 export function collectEnumNames(sourceFile: ts.SourceFile): Set<string> {
-  const names = new Set<string>();
-
-  function visit(node: ts.Node) {
-    if (ts.isEnumDeclaration(node)) names.add(node.name.text);
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-  return names;
+  return collectInterfaceAndEnumNames(sourceFile).enumNames;
 }
 
 /**
@@ -217,6 +221,7 @@ export function collectSourceContext(sourceFile: ts.SourceFile): SourceContext {
   const localDeclarations = collectLocalDeclarationNames(sourceFile);
   const filteredImportedNames = new Set([...importedNames].filter((n) => !localDeclarations.has(n)));
   const diBindings = collectDiBindings(sourceFile, importedNames);
+  const { interfaceNames, enumNames } = collectInterfaceAndEnumNames(sourceFile);
 
   return {
     importedNames,
@@ -225,7 +230,7 @@ export function collectSourceContext(sourceFile: ts.SourceFile): SourceContext {
     localDeclarations,
     importMap: collectTypeImportMap(sourceFile),
     typeOnlyImports: collectTypeOnlyImports(sourceFile),
-    interfaceNames: collectInterfaceNames(sourceFile),
-    enumNames: collectEnumNames(sourceFile),
+    interfaceNames,
+    enumNames,
   };
 }
