@@ -38,11 +38,11 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "@typescript/native-preview": "7.0.0-dev.20260501.1",
-    "oxfmt": "^0.47.0",
+    "@typescript/native-preview": "7.0.0-dev.20260508.1",
+    "oxfmt": "^0.48.0",
     "oxlint": "^1.59.0",
     "oxlint-tsgolint": "^0.22.0",
-    "tsdown": "^0.21.7",
+    "tsdown": "^0.22.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   },
