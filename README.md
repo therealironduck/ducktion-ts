@@ -14,7 +14,6 @@ A simple, flexible dependency injection solution for Typescript!
 
 ## Roadmap
 
-- ~~Rollup~~ (done — see note below) & Webpack, etc.
 - Performance optimization (auto resolve -> skip node_modules, configurable)
 - Docs
 
