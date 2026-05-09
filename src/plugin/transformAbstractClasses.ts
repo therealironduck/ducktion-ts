@@ -17,8 +17,11 @@
 
 import ts from "typescript";
 
-export const transformAbstractClasses = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+export const transformAbstractClasses = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+): string => {
 
   const insertions: Array<{ pos: number; text: string }> = [];
 

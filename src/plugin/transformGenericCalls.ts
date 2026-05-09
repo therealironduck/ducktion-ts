@@ -206,8 +206,11 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   },
 };
 
-export const transformGenericCalls = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+export const transformGenericCalls = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+): string => {
 
   const importedNames = collectImportedNames(sourceFile);
   if (importedNames.size === 0) {

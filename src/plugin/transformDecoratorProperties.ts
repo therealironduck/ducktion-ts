@@ -37,8 +37,11 @@ import {
   collectTypeOnlyImports,
 } from "./collectImports";
 
-export const transformDecoratorProperties = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+export const transformDecoratorProperties = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+): string => {
 
   const rawImportedNames = collectImportedNames(sourceFile);
   if (rawImportedNames.size === 0) return code;

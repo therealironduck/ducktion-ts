@@ -99,8 +99,11 @@ function extractResolveTagsDecoratorValue(
   return extractDecoratorStringArg(param, sourceFile, importedNames, "resolveTags");
 }
 
-export const transformConstructorDependencies = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+export const transformConstructorDependencies = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+): string => {
   const importMap = collectTypeImportMap(sourceFile);
   const typeOnlyImports = collectTypeOnlyImports(sourceFile);
   const interfaceNames = collectInterfaceNames(sourceFile);

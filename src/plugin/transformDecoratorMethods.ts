@@ -98,8 +98,11 @@ function extractResolveTagsDecoratorValue(
   return extractDecoratorStringArg(param, sourceFile, importedNames, "resolveTags");
 }
 
-export const transformDecoratorMethods = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+export const transformDecoratorMethods = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+): string => {
 
   const rawImportedNames = collectImportedNames(sourceFile);
   if (rawImportedNames.size === 0) return code;
