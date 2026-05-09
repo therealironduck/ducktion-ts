@@ -1,7 +1,7 @@
-import path from "node:path";
 import { createFsFromVolume, Volume } from "memfs";
-import webpack from "webpack";
+import path from "node:path";
 import { expect, test } from "vitest";
+import webpack from "webpack";
 
 import { PACKAGE_NAME } from "../../src/constants";
 import plugin from "../../src/webpack";

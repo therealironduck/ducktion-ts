@@ -1,5 +1,5 @@
-import path from "node:path";
 import { build } from "esbuild";
+import path from "node:path";
 import { expect, test } from "vitest";
 
 import { PACKAGE_NAME } from "../../src/constants";
