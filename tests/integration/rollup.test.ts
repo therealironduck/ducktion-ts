@@ -43,10 +43,10 @@ function stripTypesPlugin(): Plugin {
   };
 }
 
-async function bundle(entry: string): Promise<string> {
+async function bundle(entry: string, options?: Parameters<typeof plugin>[0]): Promise<string> {
   const build = await rollup({
     input: entry,
-    plugins: [resolverPlugin(), plugin(), stripTypesPlugin()],
+    plugins: [resolverPlugin(), plugin(options), stripTypesPlugin()],
     external: (id) => id.startsWith("node:") || id === "unplugin",
   });
 
@@ -73,6 +73,18 @@ test("it propagates a build error when a DI method is called without type argume
   await expect(bundle("./tests/stubs/missing-type-arg.ts")).rejects.toThrow(
     "`register()` called without required type arguments",
   );
+});
+
+test("it skips transformation for files matching a custom excludes pattern", async () => {
+  const code = await bundle("./tests/stubs/vendor/raw.ts", { excludes: ["vendor"] });
+
+  expect(code).not.toMatch(/__registerAs\("[^"]+#MyInterface"/);
+});
+
+test("it still transforms files whose name contains the excluded segment as a substring", async () => {
+  const code = await bundle("./tests/stubs/raw.ts", { excludes: ["vendor"] });
+
+  expect(code).toMatch(/__registerAs\("[^"]+#MyInterface",\s*MyInterface\)/);
 });
 
 test("it only replaces `register<T>()` on DiContainer, not on unrelated classes in the same file", async () => {

@@ -6,7 +6,7 @@ import webpack from "webpack";
 import { PACKAGE_NAME } from "../../src/constants";
 import plugin from "../../src/webpack";
 
-async function bundle(entry: string): Promise<string> {
+async function bundle(entry: string, options?: Parameters<typeof plugin>[0]): Promise<string> {
   return new Promise((resolve, reject) => {
     const vol = new Volume();
     const memoryFs = createFsFromVolume(vol);
@@ -40,7 +40,7 @@ async function bundle(entry: string): Promise<string> {
           callback();
         },
       ],
-      plugins: [plugin()],
+      plugins: [plugin(options)],
     });
 
     compiler.outputFileSystem = memoryFs as webpack.Compiler["outputFileSystem"];
@@ -76,6 +76,18 @@ test("it propagates a build error when a DI method is called without type argume
   await expect(bundle("./tests/stubs/missing-type-arg.ts")).rejects.toThrow(
     "`register()` called without required type arguments",
   );
+});
+
+test("it skips transformation for files matching a custom excludes pattern", async () => {
+  const code = await bundle("./tests/stubs/vendor/raw.ts", { excludes: ["vendor"] });
+
+  expect(code).not.toMatch(/__registerAs\("[^"]+#MyInterface"/);
+});
+
+test("it still transforms files whose name contains the excluded segment as a substring", async () => {
+  const code = await bundle("./tests/stubs/raw.ts", { excludes: ["vendor"] });
+
+  expect(code).toMatch(/__registerAs\("[^"]+#MyInterface",\s*MyInterface\)/);
 });
 
 test("it only replaces `register<T>()` on DiContainer, not on unrelated classes in the same file", async () => {
