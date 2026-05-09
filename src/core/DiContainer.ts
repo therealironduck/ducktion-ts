@@ -15,6 +15,8 @@ import DucktionLogger, { DUCKTION_LOGGER_TOKEN, LogLevel } from "./DucktionLogge
 import ServiceDefinition from "./ServiceDefinition";
 import { getStatic } from "./utils";
 
+const EMPTY_PARAMETERS: Map<string, unknown> = new Map();
+
 /**
  * This is the core component of this whole package. It holds a list of all registered services
  * and their concrete implementations. It also stores all resolved instances as singletons.
@@ -36,9 +38,6 @@ class DiContainer {
    */
   static get singleton(): DiContainer {
     DiContainer._singleton ??= new DiContainer();
-
-    // TODO: Do i want that?
-    DiContainer._singleton.reinitialize();
 
     return DiContainer._singleton;
   }
@@ -280,7 +279,7 @@ class DiContainer {
   public __resolveByToken(token: string, id?: string): object {
     if (id) token += `___${id}`;
 
-    return this.innerResolve(token, []);
+    return this.innerResolve(token, new Set());
   }
 
   /**
@@ -296,14 +295,14 @@ class DiContainer {
   public __resolveWithType(token: string, concreteType: Implementation | undefined, id?: string): object {
     if (id) token += `___${id}`;
 
-    return this.innerResolve(token, [], concreteType);
+    return this.innerResolve(token, new Set(), concreteType);
   }
 
   /**
    * Inner logic to resolve a component. This method handles the recursive resolving of all
    * parameters of the constructor. Also it checks for circular dependencies.
    */
-  private innerResolve(token: string, dependencyChain: string[], concreteType?: Implementation): object {
+  private innerResolve(token: string, dependencyChain: Set<string>, concreteType?: Implementation): object {
     // If we try to resolve scalar values (number, string, etc.) we just fail instantly
     if (token === SCALAR_TOKEN) {
       this.logger?.log(LogLevel.error, "Service cant resolve parameter, because it is a scalar value");
@@ -332,7 +331,7 @@ class DiContainer {
       // If the service is in singleton mode, we will store the instance
       // If no singleton mode is specified, we will use the default singleton mode
       if ((definition.singletonMode ?? this.defaultSingletonMode) === "singleton") {
-        this.storeAsSingleton(token, instance, definition.serviceType);
+        this.storeAsSingleton(token, instance, definition.serviceType, definition);
       }
 
       // Anyway, return the resolved instance
@@ -359,39 +358,43 @@ class DiContainer {
       throw new Error(`Service is not registered`);
     }
 
-    // Add the current token to the dependency chain
-    dependencyChain.push(token);
+    // Add the current token to the dependency chain; remove it in finally so that
+    // after this frame completes, sibling services are not blocked by it.
+    dependencyChain.add(token);
+    try {
+      // Resolve all dependencies recursively of the constructor
+      const instance = new serviceType(
+        ...this.resolveParameters(
+          serviceType.__ducktionDependencies ?? [],
+          dependencyChain,
+          definition?.parameters ?? new Map(),
+        ),
+      );
 
-    // Resolve all dependencies recursively of the constructor
-    const instance = new serviceType(
-      ...this.resolveParameters(
-        serviceType.__ducktionDependencies ?? [],
-        dependencyChain,
-        definition?.parameters ?? new Map(),
-      ),
-    );
+      // And resolve all dependencies that occur because of the Resolve decorator
+      this.resolveDependencies(instance, dependencyChain);
 
-    // And resolve all dependencies that occur because of the Resolve decorator
-    this.resolveDependencies(instance, dependencyChain);
+      const isAutoResolved = definition === undefined;
 
-    const isAutoResolved = definition === undefined;
+      // This is a complex check to determine if the resolved service should be stored as a singleton
+      // Basically it will be stored if:
+      // (a) auto resolve is enabled and the auto resolve singleton mode is set to singleton
+      // or (b) auto resolve is disabled and the service singleton mode is set to singleton
+      // If in case (b) the service singleton mode is not set, we will use the default singleton mode
+      const storeSingleton =
+        (isAutoResolved && this.autoResolveSingletonMode === "singleton") ||
+        (!isAutoResolved && (definition?.singletonMode ?? "singleton") === this.defaultSingletonMode);
 
-    // This is a complex check to determine if the resolved service should be stored as a singleton
-    // Basically it will be stored if:
-    // (a) auto resolve is enabled and the auto resolve singleton mode is set to singleton
-    // or (b) auto resolve is disabled and the service singleton mode is set to singleton
-    // If in case (b) the service singleton mode is not set, we will use the default singleton mode
-    const storeSingleton =
-      (isAutoResolved && this.autoResolveSingletonMode === "singleton") ||
-      (!isAutoResolved && (definition?.singletonMode ?? "singleton") === this.defaultSingletonMode);
+      if (storeSingleton) {
+        this.storeAsSingleton(token, instance, serviceType, definition);
+      }
 
-    if (storeSingleton) {
-      this.storeAsSingleton(token, instance, serviceType);
+      this.logger?.log(LogLevel.debug, `Resolved service: ${token} => ${serviceType.name}`);
+
+      return instance;
+    } finally {
+      dependencyChain.delete(token);
     }
-
-    this.logger?.log(LogLevel.debug, `Resolved service: ${token} => ${serviceType.name}`);
-
-    return instance;
   }
 
   /**
@@ -399,8 +402,12 @@ class DiContainer {
    * If the type is already registered, it will override the instance.
    * Otherwise it will create a new service definition.
    */
-  private storeAsSingleton(token: string, instance: object, concreteType: Implementation): void {
-    const definition = this.services.get(token);
+  private storeAsSingleton(
+    token: string,
+    instance: object,
+    concreteType: Implementation,
+    definition: ServiceDefinition | undefined,
+  ): void {
     if (definition) {
       definition.setInstance(instance);
 
@@ -416,8 +423,8 @@ class DiContainer {
    * which contain the @resolve decorator and all properties that have the
    * `@resolveTags` decorator.
    */
-  public resolveDependencies(instance: object, dependencyChain?: string[]) {
-    dependencyChain ??= [];
+  public resolveDependencies(instance: object, dependencyChain?: Set<string>) {
+    dependencyChain ??= new Set();
 
     const resolveProperties = getStatic<DucktionResolveParameters>(instance, "__ducktionResolveProperties");
     const resolveMethods = getStatic<DucktionResolveMethods>(instance, "__ducktionResolveMethods");
@@ -427,7 +434,7 @@ class DiContainer {
 
     for (const prop of resolveProperties ?? []) {
       const token = prop.id ? `${prop.token}___${prop.id}` : prop.token;
-      obj[prop.propertyKey] = this.innerResolve(token, [...dependencyChain], prop.concrete);
+      obj[prop.propertyKey] = this.innerResolve(token, dependencyChain, prop.concrete);
     }
 
     for (const prop of resolveTagProperties ?? []) {
@@ -436,7 +443,7 @@ class DiContainer {
 
     // Call @resolve-decorated methods with their resolved dependencies
     for (const method of resolveMethods ?? []) {
-      obj[method.methodKey](...this.resolveParameters(method.dependencies, [...dependencyChain], new Map()));
+      obj[method.methodKey](...this.resolveParameters(method.dependencies, dependencyChain, EMPTY_PARAMETERS));
     }
   }
 
@@ -446,7 +453,7 @@ class DiContainer {
    */
   private resolveParameters(
     dependencies: DucktionDependencies,
-    dependencyChain: string[],
+    dependencyChain: Set<string>,
     parameters: Map<string, unknown>,
   ): unknown[] {
     return dependencies.map((dep): any => {
@@ -464,15 +471,13 @@ class DiContainer {
       const token = dep.id ? `${dep.token}___${dep.id}` : dep.token;
 
       // If the token is already in the dependencyChain, we have a circular dependency
-      if (dependencyChain.includes(token)) {
+      if (dependencyChain.has(token)) {
         this.logger?.log(LogLevel.error, `Circular dependency detected for parameter: ${dep.name}`);
         throw new Error(`Circular dependency detected for parameter '${dep.name}'`);
       }
 
-      // Add the token to the dependency chain
-      dependencyChain.push(token);
-
       // Resolve the parameter. If any error occurs, we wrap it in another error and bubble it up
+      // innerResolve owns adding/removing the token from the chain.
       try {
         return this.innerResolve(token, dependencyChain, dep.concrete);
       } catch (error) {
@@ -572,8 +577,8 @@ class DiContainer {
    */
   public *getTagged<T>(tag: string): Generator<T, void, unknown> {
     for (let [token, definition] of this.services) {
-      if (definition.tags.includes(tag)) {
-        yield this.innerResolve(token, []) as T;
+      if (definition.tags.has(tag)) {
+        yield this.innerResolve(token, new Set()) as T;
       }
     }
   }

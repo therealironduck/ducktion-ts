@@ -15,15 +15,7 @@
 import ts from "typescript";
 
 import { buildToken } from "./buildToken";
-import {
-  collectDiBindings,
-  collectEnumNames,
-  collectImportedNames,
-  collectInterfaceNames,
-  collectTypeImportMap,
-  collectTypeOnlyImports,
-  getRootIdentifier,
-} from "./collectImports";
+import { collectSourceContext, getRootIdentifier, type SourceContext } from "./collectImports";
 import { SCALAR_TOKEN } from "./transformConstructorDependencies";
 
 const SCALAR_KINDS = new Set([
@@ -206,19 +198,17 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   },
 };
 
-export const transformGenericCalls = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+export const transformGenericCalls = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  ctx: SourceContext = collectSourceContext(sourceFile),
+): string => {
+  const { importedNames, diBindings, importMap, typeOnlyImports, interfaceNames, enumNames } = ctx;
 
-  const importedNames = collectImportedNames(sourceFile);
   if (importedNames.size === 0) {
     return code;
   }
-
-  const diBindings = collectDiBindings(sourceFile, importedNames);
-  const importMap = collectTypeImportMap(sourceFile);
-  const typeOnlyImports = collectTypeOnlyImports(sourceFile);
-  const interfaceNames = collectInterfaceNames(sourceFile);
-  const enumNames = collectEnumNames(sourceFile);
 
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 

@@ -83,6 +83,56 @@ test("it propagates a build error when a DI method is called without type argume
   ).rejects.toThrow("`register()` called without required type arguments");
 });
 
+test("it skips transformation for files matching a custom excludes pattern", async () => {
+  const result = await build({
+    plugins: [plugin({ excludes: ["vendor"] })],
+    resolve: { alias },
+    logLevel: "silent",
+    build: {
+      write: false,
+      minify: false,
+      lib: {
+        entry: "./tests/stubs/vendor/raw.ts",
+        formats: ["es"],
+      },
+      rollupOptions: {
+        treeshake: false,
+      },
+    },
+  });
+
+  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
+  const code = outputs[0].code;
+
+  expect(code).not.toMatch(/__registerAs\("[^"]+#MyInterface"/);
+});
+
+test("it still transforms files whose name contains the excluded segment as a substring", async () => {
+  const result = await build({
+    plugins: [plugin({ excludes: ["vendor"] })],
+    resolve: { alias },
+    logLevel: "silent",
+    build: {
+      write: false,
+      minify: false,
+      lib: {
+        entry: "./tests/stubs/raw.ts",
+        formats: ["es"],
+      },
+      rollupOptions: {
+        treeshake: false,
+      },
+    },
+  });
+
+  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
+  const code = outputs[0].code;
+
+  expect(code).toMatch(/__registerAs\("[^"]+#MyInterface",\s*MyInterface\)/);
+});
+
 test("it only replaces `register<T>()` on DiContainer, not on unrelated classes in the same file", async () => {
   const result = await build({
     plugins: [plugin()],

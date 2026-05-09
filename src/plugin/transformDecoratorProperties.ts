@@ -28,32 +28,25 @@
 import ts from "typescript";
 
 import { buildToken } from "./buildToken";
-import {
-  collectEnumNames,
-  collectImportedNames,
-  collectInterfaceNames,
-  collectLocalDeclarationNames,
-  collectTypeImportMap,
-  collectTypeOnlyImports,
-} from "./collectImports";
+import { collectSourceContext, type SourceContext } from "./collectImports";
 
-export const transformDecoratorProperties = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+export const transformDecoratorProperties = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  ctx: SourceContext = collectSourceContext(sourceFile),
+): string => {
+  const {
+    importedNames: rawImportedNames,
+    filteredImportedNames: importedNames,
+    importMap,
+    typeOnlyImports,
+    interfaceNames,
+    enumNames,
+  } = ctx;
 
-  const rawImportedNames = collectImportedNames(sourceFile);
   if (rawImportedNames.size === 0) return code;
-
-  // Remove any imported names that are shadowed by a top-level local declaration.
-  // A local `function resolve() {}` would shadow `import { resolve } from "..."` and
-  // the decorator would refer to the local one — so we must not transform it.
-  const localDeclarations = collectLocalDeclarationNames(sourceFile);
-  const importedNames = new Set([...rawImportedNames].filter((n) => !localDeclarations.has(n)));
   if (importedNames.size === 0) return code;
-
-  const importMap = collectTypeImportMap(sourceFile);
-  const typeOnlyImports = collectTypeOnlyImports(sourceFile);
-  const interfaceNames = collectInterfaceNames(sourceFile);
-  const enumNames = collectEnumNames(sourceFile);
 
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 

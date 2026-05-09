@@ -25,90 +25,18 @@
 
 import ts from "typescript";
 
-import { buildToken } from "./buildToken";
-import {
-  collectEnumNames,
-  collectImportedNames,
-  collectInterfaceNames,
-  collectLocalDeclarationNames,
-  collectTypeImportMap,
-  collectTypeOnlyImports,
-} from "./collectImports";
+import { collectSourceContext, type SourceContext } from "./collectImports";
+import { buildParamEntry } from "./transformHelpers";
 
 export const SCALAR_TOKEN = "ducktion__scalar";
 
-const SCALAR_KINDS = new Set([
-  ts.SyntaxKind.StringKeyword,
-  ts.SyntaxKind.NumberKeyword,
-  ts.SyntaxKind.BooleanKeyword,
-  ts.SyntaxKind.BigIntKeyword,
-  ts.SyntaxKind.SymbolKeyword,
-  ts.SyntaxKind.NullKeyword,
-  ts.SyntaxKind.UndefinedKeyword,
-]);
-
-function isScalarType(typeNode: ts.TypeNode): boolean {
-  if (SCALAR_KINDS.has(typeNode.kind)) return true;
-  // `null` is a LiteralTypeNode wrapping a NullKeyword literal, not a keyword type itself.
-  if (ts.isLiteralTypeNode(typeNode) && typeNode.literal.kind === ts.SyntaxKind.NullKeyword) return true;
-  return false;
-}
-
-/**
- * Returns the string value of a `@id("foo")` decorator on a constructor parameter,
- * or undefined if no such decorator is present (or `id` is not imported from our package).
- */
-function extractDecoratorStringArg(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-  decoratorName: string,
-): string | undefined {
-  const decorators = ts.getDecorators(param);
-  if (!decorators) return undefined;
-
-  for (const decorator of decorators) {
-    if (!ts.isCallExpression(decorator.expression)) continue;
-    const callee = decorator.expression.expression;
-    if (!ts.isIdentifier(callee)) continue;
-    if (callee.text !== decoratorName || !importedNames.has(decoratorName)) continue;
-
-    const args = decorator.expression.arguments;
-    if (args.length !== 1) continue;
-    const arg = args[0];
-    if (!ts.isStringLiteral(arg)) continue;
-    return arg.text;
-  }
-
-  return undefined;
-}
-
-function extractIdDecoratorValue(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-): string | undefined {
-  return extractDecoratorStringArg(param, sourceFile, importedNames, "id");
-}
-
-function extractResolveTagsDecoratorValue(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-): string | undefined {
-  return extractDecoratorStringArg(param, sourceFile, importedNames, "resolveTags");
-}
-
-export const transformConstructorDependencies = (code: string, id: string): string => {
-  const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
-  const importMap = collectTypeImportMap(sourceFile);
-  const typeOnlyImports = collectTypeOnlyImports(sourceFile);
-  const interfaceNames = collectInterfaceNames(sourceFile);
-  const enumNames = collectEnumNames(sourceFile);
-
-  const rawImportedNames = collectImportedNames(sourceFile);
-  const localDeclarations = collectLocalDeclarationNames(sourceFile);
-  const importedNames = new Set([...rawImportedNames].filter((n) => !localDeclarations.has(n)));
+export const transformConstructorDependencies = (
+  code: string,
+  id: string,
+  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  ctx: SourceContext = collectSourceContext(sourceFile),
+): string => {
+  const { importMap, typeOnlyImports, interfaceNames, enumNames, filteredImportedNames: importedNames } = ctx;
 
   const insertions: Array<{ pos: number; text: string }> = [];
 
@@ -125,33 +53,18 @@ export const transformConstructorDependencies = (code: string, id: string): stri
         const ctors = node.members.filter(ts.isConstructorDeclaration);
         const ctor = ctors.find((c) => c.body !== undefined) ?? ctors[0];
         if (ctor && ctor.parameters.length > 0) {
-          const entries = ctor.parameters.map((param) => {
-            const name = ts.isIdentifier(param.name) ? param.name.text : "";
-            const resolveTag = extractResolveTagsDecoratorValue(param, sourceFile, importedNames);
-
-            if (resolveTag !== undefined) {
-              return `{ name: ${JSON.stringify(name)}, token: "ducktion__tag", tag: ${JSON.stringify(resolveTag)} }`;
-            }
-
-            const paramId = extractIdDecoratorValue(param, sourceFile, importedNames);
-
-            if (!param.type || isScalarType(param.type)) {
-              const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
-              return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(SCALAR_TOKEN)}, concrete: undefined${idPart} }`;
-            }
-
-            const typeName = param.type.getText(sourceFile);
-            const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
-            const token = buildToken(typeName, importMap, id);
-
-            const isConcrete =
-              !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
-
-            const concrete = isConcrete ? bareTypeName : "undefined";
-            const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
-
-            return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(token)}, concrete: ${concrete}${idPart} }`;
-          });
+          const entries = ctor.parameters.map((param) =>
+            buildParamEntry(
+              param,
+              sourceFile,
+              importedNames,
+              importMap,
+              id,
+              typeOnlyImports,
+              interfaceNames,
+              enumNames,
+            ),
+          );
 
           insertions.push({
             pos: node.members.pos,

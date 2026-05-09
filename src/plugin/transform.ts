@@ -1,3 +1,6 @@
+import ts from "typescript";
+
+import { collectSourceContext, type SourceContext } from "./collectImports";
 import { transformAbstractClasses } from "./transformAbstractClasses";
 import { transformConstructorDependencies } from "./transformConstructorDependencies";
 import { transformDecoratorMethods } from "./transformDecoratorMethods";
@@ -16,12 +19,29 @@ import { transformGenericCalls } from "./transformGenericCalls";
  *     type token and concrete constructor survive type erasure.
  *  5. Injects `static __ducktionResolveMethods = [...]` for methods decorated
  *     with bare `@resolve` so parameter types survive type erasure.
+ *
+ * The source file is parsed once and import-collection results are computed once
+ * and shared across all stages. A re-parse only happens when a stage actually
+ * modifies the code (transforms never touch import declarations, so the context
+ * stays valid even after a re-parse).
  */
 export const transform = (code: string, id: string): string => {
-  let result = transformGenericCalls(code, id);
-  result = transformAbstractClasses(result, id);
-  result = transformConstructorDependencies(result, id);
-  result = transformDecoratorProperties(result, id);
-  result = transformDecoratorMethods(result, id);
-  return result;
+  let current = code;
+  let sf = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
+  const ctx: SourceContext = collectSourceContext(sf);
+
+  function maybeReparse(next: string): void {
+    if (next !== current) {
+      current = next;
+      sf = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
+    }
+  }
+
+  maybeReparse(transformGenericCalls(current, id, sf, ctx));
+  maybeReparse(transformAbstractClasses(current, id, sf));
+  maybeReparse(transformConstructorDependencies(current, id, sf, ctx));
+  maybeReparse(transformDecoratorProperties(current, id, sf, ctx));
+  maybeReparse(transformDecoratorMethods(current, id, sf, ctx));
+
+  return current;
 };
