@@ -57,6 +57,7 @@
     "typescript": "^6.0.2",
     "unrun": "^0.3.0",
     "vitepress": "^2.0.0-alpha.17",
+    "vitepress-plugin-group-icons": "^1.7.5",
     "vitest": "^4.1.2",
     "webpack": "^5.106.2",
     "webpack-cli": "^7.0.2"

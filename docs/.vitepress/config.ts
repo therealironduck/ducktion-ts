@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import { groupIconMdPlugin, groupIconVitePlugin } from "vitepress-plugin-group-icons";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -9,7 +10,7 @@ export default defineConfig({
 
   themeConfig: {
     nav: [
-      { text: "Getting started", link: "/getting-started" },
+      { text: "Getting Started", link: "/getting-started" },
       { text: "Changelog", link: "https://github.com/therealironduck/ducktion-ts/releases" },
     ],
 
@@ -17,7 +18,7 @@ export default defineConfig({
       {
         text: "Introduction",
         items: [
-          { text: "Getting started", link: "/getting-started" },
+          { text: "Getting Started", link: "/getting-started" },
           { text: "Use with Vite", link: "/use/vite" },
           { text: "Use with Rolldown", link: "/use/rolldown" },
           { text: "Use with Rollup", link: "/use/rollup" },
@@ -82,5 +83,13 @@ export default defineConfig({
       light: "catppuccin-latte",
       dark: "catppuccin-mocha",
     },
+
+    config(md) {
+      md.use(groupIconMdPlugin);
+    },
+  },
+
+  vite: {
+    plugins: [groupIconVitePlugin()],
   },
 });
