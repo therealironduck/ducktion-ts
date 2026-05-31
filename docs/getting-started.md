@@ -12,7 +12,7 @@ If you are new to dependency injection, you can read more about it [here](https:
 
 ## Installation
 
-Ducktion TS can be installed using the any common package manager.
+Ducktion TS can be installed using any common package manager.
 
 Start by installing the package:
 
@@ -36,7 +36,7 @@ pnpm add @therealironduck/ducktion-ts
 
 :::
 
-Next add the plugin to your bundler of choice. For more information, why a dedicated plugin is required, see [Internal mechanisms](/internal-mechanisms).
+Next, add the plugin to your bundler of choice. For more information, why a dedicated plugin is required, see [Internal mechanisms](/internal-mechanisms).
 
 ::: code-group
 
@@ -127,7 +127,7 @@ import DiContainer from "@therealironduck/ducktion-ts";
 const player = DiContainer.singleton.resolve<Player>();
 ```
 
-It will automatically create an instance of the `Player` class for you and return it. In addition it will ensure that only one instance of the `Player` class is created. If you call `resolve<Player>()` again, it will return the same instance as before. Of course, you can change this behavior if you want to. See [the documentation](/services/singleton-services) for more information.
+It will automatically create an instance of the `Player` class for you and return it. In addition, it will ensure that only one instance of the `Player` class is created. If you call `resolve<Player>()` again, it will return the same instance as before. Of course, you can change this behavior if you want to. See [the documentation](/services/singleton-services) for more information.
 
 ## What now?
 
