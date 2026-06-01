@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
-import { SCALAR_TOKEN, transformConstructorDependencies } from "../../src/plugin/transformConstructorDependencies";
+import { SCALAR_TOKEN } from "../../src/constants";
+import { transformConstructorDependencies } from "../../src/plugin/transformConstructorDependencies";
 
 const FILE_ID = "/project/src/service.ts";
 

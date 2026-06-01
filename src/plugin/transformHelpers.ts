@@ -1,7 +1,7 @@
 import ts from "typescript";
 
+import { SCALAR_TOKEN } from "../constants";
 import { buildToken } from "./buildToken";
-import { SCALAR_TOKEN } from "./transformConstructorDependencies";
 
 export const SCALAR_KINDS = new Set([
   ts.SyntaxKind.StringKeyword,

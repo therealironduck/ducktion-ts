@@ -10,7 +10,7 @@ import type {
   SingletonMode,
 } from "../types";
 
-import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
+import { SCALAR_TOKEN } from "../constants";
 import DucktionLogger, { DUCKTION_LOGGER_TOKEN, LogLevel } from "./DucktionLogger";
 import ServiceDefinition from "./ServiceDefinition";
 import { getStatic } from "./utils";

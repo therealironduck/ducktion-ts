@@ -1,4 +1,4 @@
-import { SCALAR_TOKEN } from "../../src/plugin/transformConstructorDependencies";
+import { SCALAR_TOKEN } from "../../src/constants";
 
 export default class ScalarService {
   // This will be set by the Ducktion vite/rolldown plugin

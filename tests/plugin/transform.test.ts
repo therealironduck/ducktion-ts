@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { PACKAGE_NAME } from "../../src/constants";
+import { SCALAR_TOKEN } from "../../src/constants";
 import { transform } from "../../src/plugin/transform";
-import { SCALAR_TOKEN } from "../../src/plugin/transformConstructorDependencies";
 
 describe("register<T>()", () => {
   test("transforms on a direct DiContainer import to __registerAs with a string token", () => {

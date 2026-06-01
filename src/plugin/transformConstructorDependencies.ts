@@ -28,8 +28,6 @@ import ts from "typescript";
 import { collectSourceContext, type SourceContext } from "./collectImports";
 import { buildParamEntry } from "./transformHelpers";
 
-export const SCALAR_TOKEN = "ducktion__scalar";
-
 export const transformConstructorDependencies = (
   code: string,
   id: string,
