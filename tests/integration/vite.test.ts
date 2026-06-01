@@ -27,7 +27,7 @@ test('it converts `register<T>()` calls into `__registerAs("token", T)` at build
     },
   });
 
-  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -55,7 +55,7 @@ test("it does not replace `register<T>()` calls on unrelated classes", async () 
     },
   });
 
-  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -101,7 +101,7 @@ test("it skips transformation for files matching a custom excludes pattern", asy
     },
   });
 
-  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -126,7 +126,7 @@ test("it still transforms files whose name contains the excluded segment as a su
     },
   });
 
-  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -151,7 +151,7 @@ test("it only replaces `register<T>()` on DiContainer, not on unrelated classes 
     },
   });
 
-  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
