@@ -14,9 +14,9 @@
 
 import ts from "typescript";
 
+import { SCALAR_TOKEN } from "../constants";
 import { buildToken } from "./buildToken";
 import { collectSourceContext, getRootIdentifier, type SourceContext } from "./collectImports";
-import { SCALAR_TOKEN } from "./transformConstructorDependencies";
 
 const SCALAR_KINDS = new Set([
   ts.SyntaxKind.StringKeyword,

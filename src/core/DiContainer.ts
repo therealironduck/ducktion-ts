@@ -10,7 +10,7 @@ import type {
   SingletonMode,
 } from "../types";
 
-import { SCALAR_TOKEN } from "../plugin/transformConstructorDependencies";
+import { SCALAR_TOKEN } from "../constants";
 import DucktionLogger, { DUCKTION_LOGGER_TOKEN, LogLevel } from "./DucktionLogger";
 import ServiceDefinition from "./ServiceDefinition";
 import { getStatic } from "./utils";
@@ -195,7 +195,7 @@ class DiContainer {
    */
   public register<_T>(_id?: string): ServiceDefinition {
     throw new Error(
-      "register<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+      "register<T> method should have been replaced at build time but was not. Is the bundler plugin running?",
     );
   }
 
@@ -210,7 +210,7 @@ class DiContainer {
    */
   public registerAs<_Token, _Impl extends _Token>(_id?: string): ServiceDefinition {
     throw new Error(
-      "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+      "registerAs<Token, Impl> method should have been replaced at build time but was not. Is the bundler plugin running?",
     );
   }
 
@@ -230,7 +230,7 @@ class DiContainer {
     }
 
     // If the `implementation` is abstract, throw an error.
-    // The `__ducktionAbstract` marker will be set by our Vite/Rollup plugin
+    // The `__ducktionAbstract` marker will be set by our bundler plugin
     if (Object.hasOwn(implementation, "__ducktionAbstract")) {
       this.logger?.log(LogLevel.error, `Service '${implementation.name}' is abstract`);
       throw new Error("Service is abstract");
@@ -263,7 +263,7 @@ class DiContainer {
    */
   public resolve<_T>(_id?: string): _T {
     throw new Error(
-      "resolve<T> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+      "resolve<T> method should have been replaced at build time but was not. Is the bundler plugin running?",
     );
   }
 
@@ -498,7 +498,7 @@ class DiContainer {
    */
   public override<_Token, _Impl extends _Token = _Token>(_id?: string): ServiceDefinition {
     throw new Error(
-      "override<Token, Impl> method should have been replaced at build time but was not. Is the vite/rollup plugin running?",
+      "override<Token, Impl> method should have been replaced at build time but was not. Is the bundler plugin running?",
     );
   }
 
@@ -527,7 +527,7 @@ class DiContainer {
     }
 
     // If the `implementation` is abstract, throw an error.
-    // The `__ducktionAbstract` marker will be set by our Vite/Rollup plugin
+    // The `__ducktionAbstract` marker will be set by our bundler plugin
     if (Object.hasOwn(implementation, "__ducktionAbstract")) {
       throw new Error("Service is abstract");
     }

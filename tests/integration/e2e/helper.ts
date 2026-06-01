@@ -35,7 +35,7 @@ export async function buildAndRun(entry: string): Promise<Record<string, unknown
     },
   });
 
-  const buildResult = result as Rollup.RolldownOutput | Rollup.RolldownOutput[];
+  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 

@@ -23,7 +23,7 @@ export type SingletonMode = "singleton" | "non-singleton";
 export type LazyMode = "non-lazy" | "lazy";
 
 /**
- * This type is used for internal resolving. The vite/rollup plugin writes
+ * This type is used for internal resolving. The bundler plugin writes
  * a static array with all dependencies to each class which follows this
  * type.
  */
