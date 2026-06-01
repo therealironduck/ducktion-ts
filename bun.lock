@@ -16,7 +16,6 @@
         "oxfmt": "^0.48.0",
         "oxlint": "^1.59.0",
         "oxlint-tsgolint": "^0.22.0",
-        "rollup": "^4.60.3",
         "ts-loader": "^9.5.7",
         "tsdown": "^0.22.0",
         "typescript": "^6.0.2",

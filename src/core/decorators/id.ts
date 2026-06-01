@@ -5,7 +5,7 @@
  * Example:
  *   public constructor(@id("primary") logger: ILogger) {}
  *
- * This is a no-op at runtime. The Vite/Rollup plugin reads the decorator from
+ * This is a no-op at runtime. The bundler plugin reads the decorator from
  * the AST and injects the id into the `__ducktionDependencies` / `__ducktionResolveMethods`
  * static arrays, which the container then uses at resolve time.
  */

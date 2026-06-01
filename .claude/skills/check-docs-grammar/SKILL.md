@@ -36,7 +36,7 @@ For each file the driver listed:
    - Code blocks (fenced with ` ``` ` or indented)
    - Inline code (backtick-wrapped)
    - URLs and link targets
-   - Frontmatter keys (only fix frontmatter *values* if they contain prose)
+   - Frontmatter keys (only fix frontmatter _values_ if they contain prose)
    - Import statements, variable names, API names
    - VitePress-specific syntax (`::: info`, `:::`, custom containers)
 4. **Do not add** new content, expand sentences, or rephrase for style — only correct clear errors.

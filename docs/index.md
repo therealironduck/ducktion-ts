@@ -4,7 +4,7 @@ layout: home
 
 hero:
   name: "Ducktion TS"
-  text: "The best dependency injection container for Typescript"
+  text: "The best dependency injection container for TypeScript"
   tagline: My great project tagline
   actions:
     - theme: brand

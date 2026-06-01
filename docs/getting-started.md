@@ -36,7 +36,7 @@ pnpm add @therealironduck/ducktion-ts
 
 :::
 
-Next, add the plugin to your bundler of choice. For more information, why a dedicated plugin is required, see [Internal mechanisms](/internal-mechanisms).
+Next, add the plugin to your bundler of choice. For more information on why a dedicated plugin is required, see [Internal mechanisms](/internal-mechanisms).
 
 ::: code-group
 
@@ -51,30 +51,16 @@ export default defineConfig({
 })
 ```
 
-```ts{2,6} [rolldown.config.ts]
+```ts{2,5,7} [rolldown.config.ts]
 import { defineConfig } from 'rolldown'
 import Ducktion from '@therealironduck/ducktion-ts/rolldown'
 
 export default defineConfig({
+  platform: "node",
   plugins: [
     Ducktion(),
   ],
 })
-```
-
-```js{1,10} [rollup.config.js]
-import Ducktion from '@therealironduck/ducktion-ts/rollup'
-
-export default {
-  input: 'src/index.ts',
-  output: {
-    dir: 'dist',
-    format: 'esm',
-  },
-  plugins: [
-    Ducktion(),
-  ],
-}
 ```
 
 ```js{1,5} [webpack.config.js]
@@ -103,11 +89,10 @@ await esbuild.build({
 
 :::
 
-For more information regarding your specific bundler please refer to their dedicated documentation pages:
+For more information regarding your specific bundler, please refer to their dedicated documentation pages:
 
 - [Vite](/use/vite)
 - [Rolldown](/use/rolldown)
-- [Rollup](/use/rollup)
 - [Webpack](/use/webpack)
 - [EsBuild](/use/esbuild)
 
