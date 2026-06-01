@@ -20,7 +20,7 @@ function collectFiles(target) {
     process.exit(1);
   }
   const stat = statSync(abs);
-  if (stat.isFile()) return [abs];
+  if (stat.isFile()) return DOC_EXTENSIONS.has(extname(abs)) ? [abs] : [];
   return readdirSync(abs, { recursive: true })
     .filter((f) => DOC_EXTENSIONS.has(extname(f)))
     .map((f) => join(abs, f))
@@ -43,13 +43,15 @@ function gitChangedDocs() {
   // Untracked (new) files not yet staged
   const untracked = tryCmd("git ls-files --others --exclude-standard") || [];
 
-  // Try diff vs main branch first, then vs HEAD (staged + unstaged), then recent commits
-  const tracked =
-    tryCmd("git diff --name-only main..HEAD") ||
-    tryCmd("git diff --name-only --cached HEAD") ||
-    tryCmd("git diff --name-only HEAD") ||
-    tryCmd("git diff --name-only HEAD~1..HEAD") ||
-    [];
+  // Aggregate all diffs: committed vs main, staged, unstaged, and recent commit
+  const tracked = [
+    ...new Set([
+      ...(tryCmd("git diff --name-only main..HEAD") || []),
+      ...(tryCmd("git diff --name-only --cached HEAD") || []),
+      ...(tryCmd("git diff --name-only HEAD") || []),
+      ...(tryCmd("git diff --name-only HEAD~1..HEAD") || []),
+    ]),
+  ];
 
   // Merge and deduplicate
   return [...new Set([...tracked, ...untracked])];

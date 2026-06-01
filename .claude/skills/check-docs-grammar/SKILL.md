@@ -61,7 +61,7 @@ For each file the driver listed:
 
 After processing all files, output a summary:
 
-```
+```text
 Files checked: N
 Files with corrections: N
   - path/to/file.md — N fix(es): brief description

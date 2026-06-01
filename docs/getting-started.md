@@ -36,7 +36,7 @@ pnpm add @therealironduck/ducktion-ts
 
 :::
 
-Next, add the plugin to your bundler of choice. For more information on why a dedicated plugin is required, see [Internal mechanisms](/internal-mechanisms).
+Next, add the plugin to your bundler of choice. For more information on why a dedicated plugin is required, see [Internal mechanisms](/internal/mechanisms).
 
 ::: code-group
 
@@ -112,8 +112,8 @@ import DiContainer from "@therealironduck/ducktion-ts";
 const player = DiContainer.singleton.resolve<Player>();
 ```
 
-It will automatically create an instance of the `Player` class for you and return it. In addition, it will ensure that only one instance of the `Player` class is created. If you call `resolve<Player>()` again, it will return the same instance as before. Of course, you can change this behavior if you want to. See [the documentation](/services/singleton-services) for more information.
+It will automatically create an instance of the `Player` class for you and return it. In addition, it will ensure that only one instance of the `Player` class is created. If you call `resolve<Player>()` again, it will return the same instance as before. Of course, you can change this behavior if you want to. See [the documentation](/services/singleton) for more information.
 
 ## What now?
 
-Ducktion TS offers a lot of different features and ways to manage your services. For instance, you can register your services manually to have more fine-tuned control over how they are created. See [the documentation](/basics/configurator-classes) for more details.
+Ducktion TS offers a lot of different features and ways to manage your services. For instance, you can register your services manually to have more fine-tuned control over how they are created. See [the documentation](/basics/configurators) for more details.

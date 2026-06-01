@@ -5,7 +5,7 @@ import { groupIconMdPlugin, groupIconVitePlugin } from "vitepress-plugin-group-i
 export default defineConfig({
   title: "Ducktion TS",
   description: "The best dependency injection container for Typescript",
-  base: "/ducktion-ts",
+  base: "/ducktion-ts/",
   lastUpdated: true,
 
   themeConfig: {

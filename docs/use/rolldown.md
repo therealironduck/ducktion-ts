@@ -22,7 +22,7 @@ pnpm add @therealironduck/ducktion-ts
 
 :::
 
-Afterwards, you'll need to configure our Rolldown Plugin. It will automatically handle everything needed for Ducktion TS. You can add the plugin to your `rolldown.config.ts` file:
+Afterward, you'll need to configure our Rolldown Plugin. It will automatically handle everything needed for Ducktion TS. You can add the plugin to your `rolldown.config.ts` file:
 
 ```ts{2,5,7} [rolldown.config.ts]
 import { defineConfig } from 'rolldown'
@@ -37,7 +37,7 @@ export default defineConfig({
 ```
 
 :::warning
-Ducktion requires the `mode` to be set to `node`.
+Ducktion requires the `platform` to be set to `node`.
 :::
 
 That's it! Now you can [start using the container](/getting-started#usage) straight away!
