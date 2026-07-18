@@ -1,64 +1,48 @@
-import ts from "typescript";
-
 import { SCALAR_TOKEN } from "../constants";
+import {
+  bareTypeName,
+  getText,
+  isCallExpression,
+  isIdentifier,
+  isScalarType,
+  isStringLiteral,
+  parameterDecorators,
+  parameterName,
+  parameterType,
+  type Parameter,
+} from "./ast";
 import { buildToken } from "./buildToken";
 
-export const SCALAR_KINDS = new Set([
-  ts.SyntaxKind.StringKeyword,
-  ts.SyntaxKind.NumberKeyword,
-  ts.SyntaxKind.BooleanKeyword,
-  ts.SyntaxKind.BigIntKeyword,
-  ts.SyntaxKind.SymbolKeyword,
-  ts.SyntaxKind.NullKeyword,
-  ts.SyntaxKind.UndefinedKeyword,
-]);
-
-export function isScalarType(typeNode: ts.TypeNode): boolean {
-  if (SCALAR_KINDS.has(typeNode.kind)) return true;
-  // `null` is a LiteralTypeNode wrapping a NullKeyword literal, not a keyword type itself.
-  if (ts.isLiteralTypeNode(typeNode) && typeNode.literal.kind === ts.SyntaxKind.NullKeyword) return true;
-  return false;
-}
-
 export function extractDecoratorStringArg(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
+  param: Parameter,
   importedNames: Set<string>,
   decoratorName: string,
 ): string | undefined {
-  const decorators = ts.getDecorators(param);
+  const decorators = parameterDecorators(param);
   if (!decorators) return undefined;
 
   for (const decorator of decorators) {
-    if (!ts.isCallExpression(decorator.expression)) continue;
-    const callee = decorator.expression.expression;
-    if (!ts.isIdentifier(callee)) continue;
-    if (callee.text !== decoratorName || !importedNames.has(decoratorName)) continue;
+    if (!isCallExpression(decorator.expression)) continue;
+    const callee = decorator.expression.callee;
+    if (!isIdentifier(callee)) continue;
+    if (callee.name !== decoratorName || !importedNames.has(decoratorName)) continue;
 
     const args = decorator.expression.arguments;
     if (args.length !== 1) continue;
     const arg = args[0];
-    if (!ts.isStringLiteral(arg)) continue;
-    return arg.text;
+    if (!isStringLiteral(arg)) continue;
+    return arg.value;
   }
 
   return undefined;
 }
 
-export function extractIdDecoratorValue(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-): string | undefined {
-  return extractDecoratorStringArg(param, sourceFile, importedNames, "id");
+export function extractIdDecoratorValue(param: Parameter, importedNames: Set<string>): string | undefined {
+  return extractDecoratorStringArg(param, importedNames, "id");
 }
 
-export function extractResolveTagsDecoratorValue(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
-  importedNames: Set<string>,
-): string | undefined {
-  return extractDecoratorStringArg(param, sourceFile, importedNames, "resolveTags");
+export function extractResolveTagsDecoratorValue(param: Parameter, importedNames: Set<string>): string | undefined {
+  return extractDecoratorStringArg(param, importedNames, "resolveTags");
 }
 
 /**
@@ -66,8 +50,8 @@ export function extractResolveTagsDecoratorValue(
  * `__ducktionDependencies` / `__ducktionResolveMethods` entry string.
  */
 export function buildParamEntry(
-  param: ts.ParameterDeclaration,
-  sourceFile: ts.SourceFile,
+  param: Parameter,
+  code: string,
   importedNames: Set<string>,
   importMap: Map<string, string>,
   fileId: string,
@@ -75,28 +59,28 @@ export function buildParamEntry(
   interfaceNames: Set<string>,
   enumNames: Set<string>,
 ): string {
-  const name = ts.isIdentifier(param.name) ? param.name.text : "";
-  const resolveTag = extractResolveTagsDecoratorValue(param, sourceFile, importedNames);
+  const name = parameterName(param);
+  const resolveTag = extractResolveTagsDecoratorValue(param, importedNames);
 
   if (resolveTag !== undefined) {
     return `{ name: ${JSON.stringify(name)}, token: "ducktion__tag", tag: ${JSON.stringify(resolveTag)} }`;
   }
 
-  const paramId = extractIdDecoratorValue(param, sourceFile, importedNames);
+  const paramId = extractIdDecoratorValue(param, importedNames);
+  const typeNode = parameterType(param);
 
-  if (!param.type || isScalarType(param.type)) {
+  if (!typeNode || isScalarType(typeNode)) {
     const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
     return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(SCALAR_TOKEN)}, concrete: undefined${idPart} }`;
   }
 
-  const typeName = param.type.getText(sourceFile);
-  const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
+  const typeName = getText(code, typeNode);
+  const bareName = bareTypeName(typeName);
   const token = buildToken(typeName, importMap, fileId);
 
-  const isConcrete =
-    !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
+  const isConcrete = !typeOnlyImports.has(bareName) && !interfaceNames.has(bareName) && !enumNames.has(bareName);
 
-  const concrete = isConcrete ? bareTypeName : "undefined";
+  const concrete = isConcrete ? bareName : "undefined";
   const idPart = paramId ? `, id: ${JSON.stringify(paramId)}` : "";
 
   return `{ name: ${JSON.stringify(name)}, token: ${JSON.stringify(token)}, concrete: ${concrete}${idPart} }`;

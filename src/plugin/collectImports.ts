@@ -1,14 +1,28 @@
-import ts from "typescript";
+import type * as t from "@babel/types";
 
 import { PACKAGE_NAME } from "../constants";
+import {
+  isAssignmentExpression,
+  isClassDeclaration,
+  isEnumDeclaration,
+  isFunctionDeclaration,
+  isIdentifier,
+  isImportDeclaration,
+  isInterfaceDeclaration,
+  isMemberExpression,
+  isVariableDeclaration,
+  isVariableDeclarator,
+  type SourceFile,
+  visit,
+} from "./ast";
 
 /**
  * Walks a property access chain down to its root identifier.
  * e.g. `DiContainer.singleton.register` → `"DiContainer"`
  */
-export function getRootIdentifier(expr: ts.Expression): string | null {
-  if (ts.isIdentifier(expr)) return expr.text;
-  if (ts.isPropertyAccessExpression(expr)) return getRootIdentifier(expr.expression);
+export function getRootIdentifier(expr: unknown): string | null {
+  if (isIdentifier(expr)) return expr.name;
+  if (isMemberExpression(expr)) return getRootIdentifier(expr.object);
   return null;
 }
 
@@ -16,30 +30,15 @@ export function getRootIdentifier(expr: ts.Expression): string | null {
  * Collects all local names bound to imports from our package.
  * Handles: default imports, named imports, and namespace imports.
  */
-export function collectImportedNames(sourceFile: ts.SourceFile): Set<string> {
+export function collectImportedNames(sourceFile: SourceFile): Set<string> {
   const names = new Set<string>();
 
-  for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement)) continue;
+  for (const statement of sourceFile.program.body) {
+    if (!isImportDeclaration(statement)) continue;
+    if (statement.source.value !== PACKAGE_NAME) continue;
 
-    const spec = statement.moduleSpecifier;
-    if (!ts.isStringLiteral(spec) || spec.text !== PACKAGE_NAME) continue;
-
-    const clause = statement.importClause;
-    if (!clause) continue;
-
-    if (clause.name) {
-      names.add(clause.name.text);
-    }
-
-    if (clause.namedBindings) {
-      if (ts.isNamedImports(clause.namedBindings)) {
-        for (const el of clause.namedBindings.elements) {
-          names.add(el.name.text);
-        }
-      } else if (ts.isNamespaceImport(clause.namedBindings)) {
-        names.add(clause.namedBindings.name.text);
-      }
+    for (const specifier of statement.specifiers) {
+      names.add(specifier.local.name);
     }
   }
 
@@ -54,32 +53,25 @@ export function collectImportedNames(sourceFile: ts.SourceFile): Set<string> {
  *   const container = DiContainer.singleton;
  *   let container; container = DiContainer.singleton;
  */
-export function collectDiBindings(sourceFile: ts.SourceFile, seed: Set<string>): Set<string> {
+export function collectDiBindings(sourceFile: SourceFile, seed: Set<string>): Set<string> {
   const bindings = new Set(seed);
 
-  function visit(node: ts.Node) {
-    if (ts.isVariableDeclaration(node) && node.initializer && ts.isIdentifier(node.name)) {
-      const root = getRootIdentifier(node.initializer);
+  visit(sourceFile, (node) => {
+    if (isVariableDeclarator(node) && node.init && isIdentifier(node.id)) {
+      const root = getRootIdentifier(node.init);
       if (root && bindings.has(root)) {
-        bindings.add(node.name.text);
+        bindings.add(node.id.name);
       }
     }
 
-    if (
-      ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isIdentifier(node.left)
-    ) {
+    if (isAssignmentExpression(node) && node.operator === "=" && isIdentifier(node.left)) {
       const root = getRootIdentifier(node.right);
       if (root && bindings.has(root)) {
-        bindings.add(node.left.text);
+        bindings.add(node.left.name);
       }
     }
+  });
 
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
   return bindings;
 }
 
@@ -89,26 +81,16 @@ export function collectDiBindings(sourceFile: ts.SourceFile, seed: Set<string>):
  * type aliases *must* use one of these forms, making this a reliable signal
  * that the name has no runtime value.
  */
-export function collectTypeOnlyImports(sourceFile: ts.SourceFile): Set<string> {
+export function collectTypeOnlyImports(sourceFile: SourceFile): Set<string> {
   const names = new Set<string>();
 
-  for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement)) continue;
+  for (const statement of sourceFile.program.body) {
+    if (!isImportDeclaration(statement)) continue;
 
-    const clause = statement.importClause;
-    if (!clause) continue;
-
-    if (clause.isTypeOnly) {
-      // import type { Foo, Bar } from "..."
-      if (clause.name) names.add(clause.name.text);
-      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-        for (const el of clause.namedBindings.elements) names.add(el.name.text);
-      }
-    } else if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-      // import { type Foo } from "..."
-      for (const el of clause.namedBindings.elements) {
-        if (el.isTypeOnly) names.add(el.name.text);
-      }
+    for (const specifier of statement.specifiers) {
+      const isTypeOnly =
+        statement.importKind === "type" || (specifier.type === "ImportSpecifier" && specifier.importKind === "type");
+      if (isTypeOnly) names.add(specifier.local.name);
     }
   }
 
@@ -118,20 +100,18 @@ export function collectTypeOnlyImports(sourceFile: ts.SourceFile): Set<string> {
 /**
  * Collects names of all interface and enum declarations in a single AST traversal.
  */
-export function collectInterfaceAndEnumNames(sourceFile: ts.SourceFile): {
+export function collectInterfaceAndEnumNames(sourceFile: SourceFile): {
   interfaceNames: Set<string>;
   enumNames: Set<string>;
 } {
   const interfaceNames = new Set<string>();
   const enumNames = new Set<string>();
 
-  function visit(node: ts.Node) {
-    if (ts.isInterfaceDeclaration(node)) interfaceNames.add(node.name.text);
-    else if (ts.isEnumDeclaration(node)) enumNames.add(node.name.text);
-    ts.forEachChild(node, visit);
-  }
+  visit(sourceFile, (node) => {
+    if (isInterfaceDeclaration(node)) interfaceNames.add(node.id.name);
+    else if (isEnumDeclaration(node)) enumNames.add(node.id.name);
+  });
 
-  visit(sourceFile);
   return { interfaceNames, enumNames };
 }
 
@@ -139,7 +119,7 @@ export function collectInterfaceAndEnumNames(sourceFile: ts.SourceFile): {
  * Collects the names of all interface declarations in the source file.
  * Used to catch same-file interfaces passed to register<T>().
  */
-export function collectInterfaceNames(sourceFile: ts.SourceFile): Set<string> {
+export function collectInterfaceNames(sourceFile: SourceFile): Set<string> {
   return collectInterfaceAndEnumNames(sourceFile).interfaceNames;
 }
 
@@ -147,7 +127,7 @@ export function collectInterfaceNames(sourceFile: ts.SourceFile): Set<string> {
  * Collects the names of all enum declarations in the source file.
  * Used to catch same-file enums passed to register<T>().
  */
-export function collectEnumNames(sourceFile: ts.SourceFile): Set<string> {
+export function collectEnumNames(sourceFile: SourceFile): Set<string> {
   return collectInterfaceAndEnumNames(sourceFile).enumNames;
 }
 
@@ -155,22 +135,28 @@ export function collectEnumNames(sourceFile: ts.SourceFile): Set<string> {
  * Collects identifiers declared at the module top level via `function`, `const`/`let`/`var`,
  * or `class` statements. Used to detect shadowing of package imports by local declarations.
  */
-export function collectLocalDeclarationNames(sourceFile: ts.SourceFile): Set<string> {
+export function collectLocalDeclarationNames(sourceFile: SourceFile): Set<string> {
   const names = new Set<string>();
 
-  for (const statement of sourceFile.statements) {
-    if (ts.isFunctionDeclaration(statement) && statement.name) {
-      names.add(statement.name.text);
-    } else if (ts.isVariableStatement(statement)) {
-      for (const decl of statement.declarationList.declarations) {
-        if (ts.isIdentifier(decl.name)) names.add(decl.name.text);
+  for (const statement of sourceFile.program.body) {
+    if (isFunctionDeclaration(statement) && statement.id) {
+      names.add(statement.id.name);
+    } else if (isVariableDeclaration(statement)) {
+      for (const decl of statement.declarations) {
+        if (isIdentifier(decl.id)) names.add(decl.id.name);
       }
-    } else if (ts.isClassDeclaration(statement) && statement.name) {
-      names.add(statement.name.text);
+    } else if (isClassDeclaration(statement) && statement.id) {
+      names.add(statement.id.name);
     }
   }
 
   return names;
+}
+
+function importedLocalName(
+  specifier: t.ImportSpecifier | t.ImportDefaultSpecifier | t.ImportNamespaceSpecifier,
+): string {
+  return specifier.local.name;
 }
 
 /**
@@ -178,27 +164,14 @@ export function collectLocalDeclarationNames(sourceFile: ts.SourceFile): Set<str
  * Unlike `collectImportedNames`, this covers ALL imports (not just those from
  * this package), so we can look up where any type argument comes from.
  */
-export function collectTypeImportMap(sourceFile: ts.SourceFile): Map<string, string> {
+export function collectTypeImportMap(sourceFile: SourceFile): Map<string, string> {
   const map = new Map<string, string>();
 
-  for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement)) continue;
+  for (const statement of sourceFile.program.body) {
+    if (!isImportDeclaration(statement)) continue;
 
-    const spec = statement.moduleSpecifier;
-    if (!ts.isStringLiteral(spec)) continue;
-
-    const source = spec.text;
-    const clause = statement.importClause;
-    if (!clause) continue;
-
-    if (clause.name) {
-      map.set(clause.name.text, source);
-    }
-
-    if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-      for (const el of clause.namedBindings.elements) {
-        map.set(el.name.text, source);
-      }
+    for (const specifier of statement.specifiers) {
+      map.set(importedLocalName(specifier), statement.source.value);
     }
   }
 
@@ -216,7 +189,7 @@ export type SourceContext = {
   enumNames: Set<string>;
 };
 
-export function collectSourceContext(sourceFile: ts.SourceFile): SourceContext {
+export function collectSourceContext(sourceFile: SourceFile): SourceContext {
   const importedNames = collectImportedNames(sourceFile);
   const localDeclarations = collectLocalDeclarationNames(sourceFile);
   const filteredImportedNames = new Set([...importedNames].filter((n) => !localDeclarations.has(n)));

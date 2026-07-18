@@ -25,15 +25,27 @@
  * calls where `resolve` is imported from this package are rewritten.
  */
 
-import ts from "typescript";
-
+import {
+  bareTypeName,
+  getText,
+  isCallExpression,
+  isClassProperty,
+  isIdentifier,
+  isStringLiteral,
+  isTypeReference,
+  nodeEnd,
+  nodeStart,
+  parseSourceFile,
+  type SourceFile,
+  visit,
+} from "./ast";
 import { buildToken } from "./buildToken";
 import { collectSourceContext, type SourceContext } from "./collectImports";
 
 export const transformDecoratorProperties = (
   code: string,
   id: string,
-  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  sourceFile: SourceFile = parseSourceFile(code, id),
   ctx: SourceContext = collectSourceContext(sourceFile),
 ): string => {
   const {
@@ -50,17 +62,17 @@ export const transformDecoratorProperties = (
 
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 
-  function visit(node: ts.Node) {
-    if (ts.isPropertyDeclaration(node) && node.type) {
-      const decorators = ts.getDecorators(node);
+  visit(sourceFile, (node) => {
+    if (isClassProperty(node) && node.typeAnnotation?.type === "TSTypeAnnotation") {
+      const decorators = node.decorators;
 
       if (decorators) {
         for (const decorator of decorators) {
-          if (!ts.isCallExpression(decorator.expression)) continue;
+          if (!isCallExpression(decorator.expression)) continue;
 
-          const callee = decorator.expression.expression;
-          if (!ts.isIdentifier(callee)) continue;
-          if (callee.text !== "resolve" || !importedNames.has(callee.text)) continue;
+          const callee = decorator.expression.callee;
+          if (!isIdentifier(callee)) continue;
+          if (callee.name !== "resolve" || !importedNames.has(callee.name)) continue;
 
           // Skip if already transformed — the plugin always emits 2+ args
           if (decorator.expression.arguments.length >= 2) continue;
@@ -69,38 +81,34 @@ export const transformDecoratorProperties = (
           let userIdText: string | undefined;
           if (decorator.expression.arguments.length === 1) {
             const arg = decorator.expression.arguments[0];
-            if (!ts.isStringLiteral(arg)) continue;
-            userIdText = arg.getText(sourceFile);
+            if (!isStringLiteral(arg)) continue;
+            userIdText = getText(code, arg);
           }
 
-          const typeNode = node.type;
-          if (!ts.isTypeReferenceNode(typeNode)) continue;
+          const typeNode = node.typeAnnotation.typeAnnotation;
+          if (!isTypeReference(typeNode)) continue;
 
-          const typeName = typeNode.getText(sourceFile);
-          const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
+          const typeName = getText(code, typeNode);
+          const bareName = bareTypeName(typeName);
           const token = buildToken(typeName, importMap, id);
 
           const isConcrete =
-            !typeOnlyImports.has(bareTypeName) && !interfaceNames.has(bareTypeName) && !enumNames.has(bareTypeName);
+            !typeOnlyImports.has(bareName) && !interfaceNames.has(bareName) && !enumNames.has(bareName);
 
           // Always emit 2+ args: concrete type or `undefined` for interfaces
-          const concreteArg = isConcrete ? bareTypeName : "undefined";
+          const concreteArg = isConcrete ? bareName : "undefined";
           const baseArgs = `"${token}", ${concreteArg}`;
           const args = userIdText ? `${baseArgs}, ${userIdText}` : baseArgs;
 
           replacements.push({
-            start: decorator.expression.getStart(sourceFile),
-            end: decorator.expression.end,
+            start: nodeStart(decorator.expression),
+            end: nodeEnd(decorator.expression),
             text: `resolve(${args})`,
           });
         }
       }
     }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
+  });
 
   if (replacements.length === 0) return code;
 

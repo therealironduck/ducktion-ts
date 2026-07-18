@@ -15,30 +15,34 @@
  * untouched. Nested abstract classes are handled correctly.
  */
 
-import ts from "typescript";
+import {
+  isClassDeclaration,
+  isClassProperty,
+  isIdentifier,
+  nodeStart,
+  parseSourceFile,
+  type SourceFile,
+  visit,
+} from "./ast";
 
 export const transformAbstractClasses = (
   code: string,
   id: string,
-  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  sourceFile: SourceFile = parseSourceFile(code, id),
 ): string => {
   const insertions: Array<{ pos: number; text: string }> = [];
 
-  function visit(node: ts.Node) {
-    if (ts.isClassDeclaration(node) && node.modifiers?.some((m) => m.kind === ts.SyntaxKind.AbstractKeyword)) {
-      const alreadyInjected = node.members.some(
-        (m) => ts.isPropertyDeclaration(m) && ts.isIdentifier(m.name) && m.name.text === "__ducktionAbstract",
+  visit(sourceFile, (node) => {
+    if (isClassDeclaration(node) && node.abstract) {
+      const alreadyInjected = node.body.body.some(
+        (member) => isClassProperty(member) && isIdentifier(member.key) && member.key.name === "__ducktionAbstract",
       );
 
       if (!alreadyInjected) {
-        insertions.push({ pos: node.members.pos, text: " static __ducktionAbstract = true;" });
+        insertions.push({ pos: nodeStart(node.body) + 1, text: " static __ducktionAbstract = true;" });
       }
     }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
+  });
 
   if (insertions.length === 0) {
     return code;
