@@ -30,10 +30,6 @@
       "types": "./dist/rolldown.d.ts",
       "default": "./dist/rolldown.mjs"
     },
-    "./webpack": {
-      "types": "./dist/webpack.d.ts",
-      "default": "./dist/webpack.mjs"
-    },
     "./esbuild": {
       "types": "./dist/esbuild.d.ts",
       "default": "./dist/esbuild.mjs"
@@ -64,7 +60,6 @@
     "@types/node": "^26.0.0",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "esbuild": "^0.28.0",
-    "memfs": "^4.57.2",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.59.0",
     "oxlint-tsgolint": "^0.25.0",
@@ -73,9 +68,7 @@
     "unrun": "^0.3.0",
     "vitepress": "^1.6.4",
     "vitepress-plugin-group-icons": "^1.7.5",
-    "vitest": "^4.1.2",
-    "webpack": "^5.106.2",
-    "webpack-cli": "^7.0.2"
+    "vitest": "^4.1.2"
   },
   "peerDependencies": {
     "typescript": ">=5.0.0"

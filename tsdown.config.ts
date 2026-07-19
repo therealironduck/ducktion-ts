@@ -5,5 +5,5 @@ export default defineConfig({
     skipNodeModulesBundle: true,
   },
   dts: false,
-  entry: ["src/index.ts", "src/vite.ts", "src/rolldown.ts", "src/webpack.ts", "src/esbuild.ts"],
+  entry: ["src/index.ts", "src/vite.ts", "src/rolldown.ts", "src/esbuild.ts"],
 });

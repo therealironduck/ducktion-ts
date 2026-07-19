@@ -63,16 +63,6 @@ export default defineConfig({
 })
 ```
 
-```js{1,5} [webpack.config.js]
-const Ducktion = require('@therealironduck/ducktion-ts/webpack')
-
-module.exports = {
-  plugins: [
-    Ducktion(),
-  ],
-}
-```
-
 ```js{2,9} [esbuild]
 import * as esbuild from 'esbuild'
 import Ducktion from '@therealironduck/ducktion-ts/esbuild'
@@ -93,7 +83,6 @@ For more information regarding your specific bundler, please refer to their dedi
 
 - [Vite](/use/vite)
 - [Rolldown](/use/rolldown)
-- [Webpack](/use/webpack)
 - [EsBuild](/use/esbuild)
 
 ## Usage
