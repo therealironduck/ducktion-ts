@@ -7,6 +7,7 @@ export default defineConfig({
   description: "The best dependency injection container for Typescript",
   base: "/ducktion-ts/",
   lastUpdated: true,
+  appearance: "force-dark",
 
   themeConfig: {
     nav: [
