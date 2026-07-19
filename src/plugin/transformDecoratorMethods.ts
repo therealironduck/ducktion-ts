@@ -28,15 +28,23 @@
  * identifiers from other sources are ignored.
  */
 
-import ts from "typescript";
-
+import {
+  isClassDeclaration,
+  isClassProperty,
+  isIdentifier,
+  isMethod,
+  nodeStart,
+  parseSourceFile,
+  type SourceFile,
+  visit,
+} from "./ast";
 import { collectSourceContext, type SourceContext } from "./collectImports";
 import { buildParamEntry } from "./transformHelpers";
 
 export const transformDecoratorMethods = (
   code: string,
   id: string,
-  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  sourceFile: SourceFile = parseSourceFile(code, id),
   ctx: SourceContext = collectSourceContext(sourceFile),
 ): string => {
   const {
@@ -53,43 +61,37 @@ export const transformDecoratorMethods = (
 
   const insertions: Array<{ pos: number; text: string }> = [];
 
-  function visit(node: ts.Node) {
-    if (ts.isClassDeclaration(node) && !node.modifiers?.some((m) => m.kind === ts.SyntaxKind.AbstractKeyword)) {
-      const alreadyInjected = node.members.some(
-        (m) => ts.isPropertyDeclaration(m) && ts.isIdentifier(m.name) && m.name.text === "__ducktionResolveMethods",
+  visit(sourceFile, (node) => {
+    if (isClassDeclaration(node) && !node.abstract) {
+      const alreadyInjected = node.body.body.some(
+        (member) =>
+          isClassProperty(member) && isIdentifier(member.key) && member.key.name === "__ducktionResolveMethods",
       );
 
       if (!alreadyInjected) {
         const methodEntries: string[] = [];
 
-        for (const member of node.members) {
-          if (!ts.isMethodDeclaration(member)) continue;
+        for (const member of node.body.body) {
+          if (!isMethod(member)) continue;
 
-          const decorators = ts.getDecorators(member);
+          const decorators = member.decorators;
           if (!decorators) continue;
 
           // Only bare `@resolve` (identifier, not a call expression)
           const hasResolveDecorator = decorators.some(
-            (d) =>
-              ts.isIdentifier(d.expression) && d.expression.text === "resolve" && importedNames.has(d.expression.text),
+            (decorator) =>
+              isIdentifier(decorator.expression) &&
+              decorator.expression.name === "resolve" &&
+              importedNames.has(decorator.expression.name),
           );
 
           if (!hasResolveDecorator) continue;
 
-          const methodName = ts.isIdentifier(member.name) ? member.name.text : null;
+          const methodName = isIdentifier(member.key) ? member.key.name : null;
           if (!methodName) continue;
 
-          const deps = member.parameters.map((param) =>
-            buildParamEntry(
-              param,
-              sourceFile,
-              importedNames,
-              importMap,
-              id,
-              typeOnlyImports,
-              interfaceNames,
-              enumNames,
-            ),
+          const deps = member.params.map((param) =>
+            buildParamEntry(param, code, importedNames, importMap, id, typeOnlyImports, interfaceNames, enumNames),
           );
 
           methodEntries.push(`{ methodKey: ${JSON.stringify(methodName)}, dependencies: [${deps.join(", ")}] }`);
@@ -97,17 +99,13 @@ export const transformDecoratorMethods = (
 
         if (methodEntries.length > 0) {
           insertions.push({
-            pos: node.members.pos,
+            pos: nodeStart(node.body) + 1,
             text: ` static __ducktionResolveMethods = [${methodEntries.join(", ")}];`,
           });
         }
       }
     }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
+  });
 
   if (insertions.length === 0) return code;
 

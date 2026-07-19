@@ -27,8 +27,7 @@ async function bundle(entry: string, options?: Parameters<typeof plugin>[0]): Pr
         rules: [
           {
             test: /\.ts$/,
-            loader: "ts-loader",
-            options: { transpileOnly: true },
+            loader: path.resolve("./tests/stubs/esbuild-loader.cjs"),
           },
         ],
       },

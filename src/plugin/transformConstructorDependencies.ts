@@ -23,59 +23,54 @@
  * Nested classes are handled correctly.
  */
 
-import ts from "typescript";
-
+import {
+  isClassDeclaration,
+  isClassProperty,
+  isConstructor,
+  isIdentifier,
+  nodeStart,
+  parseSourceFile,
+  type SourceFile,
+  visit,
+} from "./ast";
 import { collectSourceContext, type SourceContext } from "./collectImports";
 import { buildParamEntry } from "./transformHelpers";
 
 export const transformConstructorDependencies = (
   code: string,
   id: string,
-  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  sourceFile: SourceFile = parseSourceFile(code, id),
   ctx: SourceContext = collectSourceContext(sourceFile),
 ): string => {
   const { importMap, typeOnlyImports, interfaceNames, enumNames, filteredImportedNames: importedNames } = ctx;
 
   const insertions: Array<{ pos: number; text: string }> = [];
 
-  function visit(node: ts.Node) {
-    if (ts.isClassDeclaration(node) && !node.modifiers?.some((m) => m.kind === ts.SyntaxKind.AbstractKeyword)) {
-      const alreadyInjected = node.members.some(
-        (m) => ts.isPropertyDeclaration(m) && ts.isIdentifier(m.name) && m.name.text === "__ducktionDependencies",
+  visit(sourceFile, (node) => {
+    if (isClassDeclaration(node) && !node.abstract) {
+      const alreadyInjected = node.body.body.some(
+        (member) => isClassProperty(member) && isIdentifier(member.key) && member.key.name === "__ducktionDependencies",
       );
 
       if (!alreadyInjected) {
         // When constructor overloads are present, only the implementation
         // signature has a body. Pick that one; fall back to the first if none
         // has a body (plain constructor with no overloads).
-        const ctors = node.members.filter(ts.isConstructorDeclaration);
+        const ctors = node.body.body.filter(isConstructor);
         const ctor = ctors.find((c) => c.body !== undefined) ?? ctors[0];
-        if (ctor && ctor.parameters.length > 0) {
-          const entries = ctor.parameters.map((param) =>
-            buildParamEntry(
-              param,
-              sourceFile,
-              importedNames,
-              importMap,
-              id,
-              typeOnlyImports,
-              interfaceNames,
-              enumNames,
-            ),
+        if (ctor && ctor.params.length > 0) {
+          const entries = ctor.params.map((param) =>
+            buildParamEntry(param, code, importedNames, importMap, id, typeOnlyImports, interfaceNames, enumNames),
           );
 
           insertions.push({
-            pos: node.members.pos,
+            pos: nodeStart(node.body) + 1,
             text: ` static __ducktionDependencies = [${entries.join(", ")}];`,
           });
         }
       }
     }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
+  });
 
   if (insertions.length === 0) {
     return code;

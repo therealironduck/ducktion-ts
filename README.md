@@ -12,9 +12,12 @@ A simple, flexible dependency injection solution for Typescript!
 - Dynamic instantiation of services with callbacks
 - Resolving of dependencies using the `@resolve` and `@id` decorators
 
-## Roadmap
+## Requirements
 
-- Docs
+The package is only compatible with Typescript 7 and above. Also you'll need one of the following build tools:
+
+- [Vite](https://vite.dev/)
+- [Rolldown](https://rolldown.rs/)
 
 ## Installation
 

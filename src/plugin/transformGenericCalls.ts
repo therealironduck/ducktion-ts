@@ -12,32 +12,31 @@
  * methods on unrelated classes are left untouched.
  */
 
-import ts from "typescript";
+import type * as t from "@babel/types";
 
 import { SCALAR_TOKEN } from "../constants";
+import {
+  bareTypeName,
+  getLineAndCharacter,
+  getText,
+  isCallExpression,
+  isIdentifier,
+  isMemberExpression,
+  isNode,
+  isScalarType,
+  nodeEnd,
+  nodeStart,
+  parseSourceFile,
+  type SourceFile,
+  type TypeNode,
+  visit,
+} from "./ast";
 import { buildToken } from "./buildToken";
 import { collectSourceContext, getRootIdentifier, type SourceContext } from "./collectImports";
 
-const SCALAR_KINDS = new Set([
-  ts.SyntaxKind.StringKeyword,
-  ts.SyntaxKind.NumberKeyword,
-  ts.SyntaxKind.BooleanKeyword,
-  ts.SyntaxKind.BigIntKeyword,
-  ts.SyntaxKind.SymbolKeyword,
-  ts.SyntaxKind.NullKeyword,
-  ts.SyntaxKind.UndefinedKeyword,
-]);
-
-function isScalarTypeArg(node: ts.TypeNode): boolean {
-  if (SCALAR_KINDS.has(node.kind)) return true;
-  // `null` in type position is a LiteralTypeNode wrapping NullKeyword, not a keyword node itself
-  if (ts.isLiteralTypeNode(node) && node.literal.kind === ts.SyntaxKind.NullKeyword) return true;
-  return false;
-}
-
 type TransformArgs = {
-  typeArgs: ts.NodeArray<ts.TypeNode>;
-  sourceFile: ts.SourceFile;
+  typeArgs: readonly TypeNode[];
+  code: string;
   importMap: Map<string, string>;
   fileId: string;
   typeOnlyImports: Set<string>;
@@ -67,6 +66,15 @@ type MethodConfig = {
   buildReplacementName?: (args: TransformArgs) => string;
   buildArgs: (args: TransformArgs) => string;
 };
+
+function getTypeArgs(node: t.CallExpression): readonly TypeNode[] {
+  const call = node as unknown as { typeArguments?: unknown; typeParameters?: unknown };
+  const typeArguments = call.typeParameters ?? call.typeArguments;
+  if (isNode(typeArguments) && typeArguments.type === "TSTypeParameterInstantiation") {
+    return (typeArguments as t.TSTypeParameterInstantiation).params;
+  }
+  return [];
+}
 
 /**
  * Validates that a type name refers to an instantiable class (not an interface, type alias, or enum).
@@ -123,12 +131,12 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   register: {
     replacementName: "__registerAs",
     requiredTypeArgs: 1,
-    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
-      const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
+    buildRuntimeError: ({ typeArgs, code, typeOnlyImports, interfaceNames, enumNames }) => {
+      const typeName = bareTypeName(getText(code, typeArgs[0]));
       return validateInstantiableType(typeName, "register", true, { typeOnlyImports, interfaceNames, enumNames });
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, idArgText }) => {
-      const typeName = typeArgs[0].getText(sourceFile);
+    buildArgs: ({ typeArgs, code, importMap, fileId, idArgText }) => {
+      const typeName = getText(code, typeArgs[0]);
       const token = buildToken(typeName, importMap, fileId);
       const base = `"${token}", ${typeName}`;
       return idArgText ? `${base}, ${idArgText}` : base;
@@ -137,20 +145,20 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   resolve: {
     replacementName: "__resolveByToken",
     requiredTypeArgs: 1,
-    buildReplacementName: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
-      if (isScalarTypeArg(typeArgs[0])) return "__resolveByToken";
-      const typeName = typeArgs[0].getText(sourceFile).replace(/<.*>$/s, "").trim();
+    buildReplacementName: ({ typeArgs, code, typeOnlyImports, interfaceNames, enumNames }) => {
+      if (isScalarType(typeArgs[0])) return "__resolveByToken";
+      const typeName = bareTypeName(getText(code, typeArgs[0]));
       if (typeOnlyImports.has(typeName) || interfaceNames.has(typeName) || enumNames.has(typeName)) {
         return "__resolveByToken";
       }
       return "__resolveWithType";
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, typeOnlyImports, interfaceNames, enumNames, idArgText }) => {
-      if (isScalarTypeArg(typeArgs[0])) return idArgText ? `"${SCALAR_TOKEN}", ${idArgText}` : `"${SCALAR_TOKEN}"`;
-      const typeName = typeArgs[0].getText(sourceFile);
-      const bareTypeName = typeName.replace(/<.*>$/s, "").trim();
+    buildArgs: ({ typeArgs, code, importMap, fileId, typeOnlyImports, interfaceNames, enumNames, idArgText }) => {
+      if (isScalarType(typeArgs[0])) return idArgText ? `"${SCALAR_TOKEN}", ${idArgText}` : `"${SCALAR_TOKEN}"`;
+      const typeName = getText(code, typeArgs[0]);
+      const bareName = bareTypeName(typeName);
       const token = buildToken(typeName, importMap, fileId);
-      if (typeOnlyImports.has(bareTypeName) || interfaceNames.has(bareTypeName) || enumNames.has(bareTypeName)) {
+      if (typeOnlyImports.has(bareName) || interfaceNames.has(bareName) || enumNames.has(bareName)) {
         return idArgText ? `"${token}", ${idArgText}` : `"${token}"`;
       }
       const base = `"${token}", ${typeName}`;
@@ -160,17 +168,17 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   registerAs: {
     replacementName: "__registerAs",
     requiredTypeArgs: 2,
-    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
-      const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
+    buildRuntimeError: ({ typeArgs, code, typeOnlyImports, interfaceNames, enumNames }) => {
+      const implTypeName = bareTypeName(getText(code, typeArgs[1]));
       return validateInstantiableType(implTypeName, "registerAs", false, {
         typeOnlyImports,
         interfaceNames,
         enumNames,
       });
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, idArgText }) => {
-      const tokenTypeName = typeArgs[0].getText(sourceFile);
-      const implTypeName = typeArgs[1].getText(sourceFile);
+    buildArgs: ({ typeArgs, code, importMap, fileId, idArgText }) => {
+      const tokenTypeName = getText(code, typeArgs[0]);
+      const implTypeName = getText(code, typeArgs[1]);
       const token = buildToken(tokenTypeName, importMap, fileId);
       const base = `"${token}", ${implTypeName}`;
       return idArgText ? `${base}, ${idArgText}` : base;
@@ -179,19 +187,19 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
   override: {
     replacementName: "__override",
     requiredTypeArgs: 1,
-    buildRuntimeError: ({ typeArgs, sourceFile, typeOnlyImports, interfaceNames, enumNames }) => {
+    buildRuntimeError: ({ typeArgs, code, typeOnlyImports, interfaceNames, enumNames }) => {
       if (typeArgs.length < 2) return null;
-      const implTypeName = typeArgs[1].getText(sourceFile).replace(/<.*>$/s, "").trim();
+      const implTypeName = bareTypeName(getText(code, typeArgs[1]));
       return validateInstantiableType(implTypeName, "override", false, { typeOnlyImports, interfaceNames, enumNames });
     },
-    buildArgs: ({ typeArgs, sourceFile, importMap, fileId, idArgText }) => {
-      const tokenTypeName = typeArgs[0].getText(sourceFile);
+    buildArgs: ({ typeArgs, code, importMap, fileId, idArgText }) => {
+      const tokenTypeName = getText(code, typeArgs[0]);
       const token = buildToken(tokenTypeName, importMap, fileId);
       if (typeArgs.length < 2) {
         // No implementation: pass undefined so __override reuses the existing serviceType
         return idArgText ? `"${token}", undefined, ${idArgText}` : `"${token}"`;
       }
-      const implTypeName = typeArgs[1].getText(sourceFile);
+      const implTypeName = getText(code, typeArgs[1]);
       const base = `"${token}", ${implTypeName}`;
       return idArgText ? `${base}, ${idArgText}` : base;
     },
@@ -201,7 +209,7 @@ const METHOD_REPLACEMENTS: Record<string, MethodConfig> = {
 export const transformGenericCalls = (
   code: string,
   id: string,
-  sourceFile: ts.SourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true),
+  sourceFile: SourceFile = parseSourceFile(code, id),
   ctx: SourceContext = collectSourceContext(sourceFile),
 ): string => {
   const { importedNames, diBindings, importMap, typeOnlyImports, interfaceNames, enumNames } = ctx;
@@ -212,29 +220,29 @@ export const transformGenericCalls = (
 
   const replacements: Array<{ start: number; end: number; text: string }> = [];
 
-  function visit(node: ts.Node) {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
-      const methodName = node.expression.name.text;
+  visit(sourceFile, (node) => {
+    if (isCallExpression(node) && isMemberExpression(node.callee) && isIdentifier(node.callee.property)) {
+      const methodName = node.callee.property.name;
       const config = METHOD_REPLACEMENTS[methodName];
       const isValidArgCount = node.arguments.length <= 1;
 
       if (config !== undefined && isValidArgCount) {
-        const root = getRootIdentifier(node.expression.expression);
+        const root = getRootIdentifier(node.callee.object);
         if (root && diBindings.has(root)) {
-          const typeArgCount = node.typeArguments?.length ?? 0;
+          const typeArgs = getTypeArgs(node);
 
-          if (typeArgCount < config.requiredTypeArgs) {
-            const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+          if (typeArgs.length < config.requiredTypeArgs) {
+            const { line, character } = getLineAndCharacter(code, nodeStart(node));
             throw new Error(
               `[ducktion-ts] ${id}:${line + 1}:${character + 1}: \`${methodName}()\` called without required type arguments. ` +
                 `Did you mean \`${methodName}<${config.requiredTypeArgs === 1 ? "T" : "Token, Impl"}>()\`?`,
             );
           }
 
-          const idArgText = node.arguments.length === 1 ? node.arguments[0].getText(sourceFile) : undefined;
+          const idArgText = node.arguments.length === 1 ? getText(code, node.arguments[0]) : undefined;
           const transformArgs: TransformArgs = {
-            typeArgs: node.typeArguments!,
-            sourceFile,
+            typeArgs,
+            code,
             importMap,
             fileId: id,
             typeOnlyImports,
@@ -246,26 +254,22 @@ export const transformGenericCalls = (
           const runtimeError = config.buildRuntimeError?.(transformArgs) ?? null;
           if (runtimeError) {
             replacements.push({
-              start: node.getStart(sourceFile),
-              end: node.end,
+              start: nodeStart(node),
+              end: nodeEnd(node),
               text: `(() => { throw new Error(${JSON.stringify(runtimeError)}); })()`,
             });
           } else {
             const replacementName = config.buildReplacementName?.(transformArgs) ?? config.replacementName;
             replacements.push({
-              start: node.expression.name.getStart(sourceFile),
-              end: node.end,
+              start: nodeStart(node.callee.property),
+              end: nodeEnd(node),
               text: `${replacementName}(${config.buildArgs(transformArgs)})`,
             });
           }
         }
       }
     }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
+  });
 
   if (replacements.length === 0) {
     return code;

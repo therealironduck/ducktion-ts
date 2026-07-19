@@ -1,5 +1,4 @@
-import ts from "typescript";
-
+import { parseSourceFile, type SourceFile } from "./ast";
 import { collectSourceContext, type SourceContext } from "./collectImports";
 import { transformAbstractClasses } from "./transformAbstractClasses";
 import { transformConstructorDependencies } from "./transformConstructorDependencies";
@@ -27,13 +26,13 @@ import { transformGenericCalls } from "./transformGenericCalls";
  */
 export const transform = (code: string, id: string): string => {
   let current = code;
-  let sf = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
+  let sf: SourceFile = parseSourceFile(current, id);
   const ctx: SourceContext = collectSourceContext(sf);
 
   function maybeReparse(next: string): void {
     if (next !== current) {
       current = next;
-      sf = ts.createSourceFile(id, current, ts.ScriptTarget.Latest, true);
+      sf = parseSourceFile(current, id);
     }
   }
 
