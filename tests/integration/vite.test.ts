@@ -1,5 +1,5 @@
 import path from "node:path";
-import { build, type Rollup } from "vite";
+import { build } from "vite";
 import { expect, test } from "vitest";
 
 import { PACKAGE_NAME } from "../../src/constants";
@@ -21,13 +21,10 @@ test('it converts `register<T>()` calls into `__registerAs("token", T)` at build
         entry: "./tests/stubs/raw.ts",
         formats: ["es"],
       },
-      rollupOptions: {
-        treeshake: false,
-      },
     },
   });
 
-  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
+  const buildResult = result as { output: { code: string }[] } | { output: { code: string }[] }[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -49,13 +46,10 @@ test("it does not replace `register<T>()` calls on unrelated classes", async () 
         entry: "./tests/stubs/unrelated.ts",
         formats: ["es"],
       },
-      rollupOptions: {
-        treeshake: false,
-      },
     },
   });
 
-  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
+  const buildResult = result as { output: { code: string }[] } | { output: { code: string }[] }[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -75,9 +69,6 @@ test("it propagates a build error when a DI method is called without type argume
           entry: "./tests/stubs/missing-type-arg.ts",
           formats: ["es"],
         },
-        rollupOptions: {
-          treeshake: false,
-        },
       },
     }),
   ).rejects.toThrow("`register()` called without required type arguments");
@@ -95,13 +86,10 @@ test("it skips transformation for files matching a custom excludes pattern", asy
         entry: "./tests/stubs/vendor/raw.ts",
         formats: ["es"],
       },
-      rollupOptions: {
-        treeshake: false,
-      },
     },
   });
 
-  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
+  const buildResult = result as { output: { code: string }[] } | { output: { code: string }[] }[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -120,13 +108,10 @@ test("it still transforms files whose name contains the excluded segment as a su
         entry: "./tests/stubs/raw.ts",
         formats: ["es"],
       },
-      rollupOptions: {
-        treeshake: false,
-      },
     },
   });
 
-  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
+  const buildResult = result as { output: { code: string }[] } | { output: { code: string }[] }[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
@@ -145,13 +130,10 @@ test("it only replaces `register<T>()` on DiContainer, not on unrelated classes 
         entry: "./tests/stubs/mixed.ts",
         formats: ["es"],
       },
-      rollupOptions: {
-        treeshake: false,
-      },
     },
   });
 
-  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
+  const buildResult = result as { output: { code: string }[] } | { output: { code: string }[] }[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
