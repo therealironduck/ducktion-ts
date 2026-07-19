@@ -30,10 +30,6 @@
       "types": "./dist/rolldown.d.ts",
       "default": "./dist/rolldown.mjs"
     },
-    "./esbuild": {
-      "types": "./dist/esbuild.d.ts",
-      "default": "./dist/esbuild.mjs"
-    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -59,7 +55,6 @@
     "@catppuccin/vitepress": "^0.1.2",
     "@types/node": "^26.0.0",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
-    "esbuild": "^0.28.0",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.59.0",
     "oxlint-tsgolint": "^0.25.0",

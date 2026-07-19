@@ -63,27 +63,12 @@ export default defineConfig({
 })
 ```
 
-```js{2,9} [esbuild]
-import * as esbuild from 'esbuild'
-import Ducktion from '@therealironduck/ducktion-ts/esbuild'
-
-await esbuild.build({
-  entryPoints: ['src/index.ts'],
-  bundle: true,
-  outdir: 'dist',
-  plugins: [
-    Ducktion(),
-  ],
-})
-```
-
 :::
 
 For more information regarding your specific bundler, please refer to their dedicated documentation pages:
 
 - [Vite](/use/vite)
 - [Rolldown](/use/rolldown)
-- [EsBuild](/use/esbuild)
 
 ## Usage
 

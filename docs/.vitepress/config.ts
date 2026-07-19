@@ -21,7 +21,6 @@ export default defineConfig({
           { text: "Getting Started", link: "/getting-started" },
           { text: "Use with Vite", link: "/use/vite" },
           { text: "Use with Rolldown", link: "/use/rolldown" },
-          { text: "Use with EsBuild", link: "/use/esbuild" },
         ],
       },
 
