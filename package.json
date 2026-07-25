@@ -55,8 +55,8 @@
     "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
-    "@babel/parser": "^7.28.5",
-    "@babel/types": "^7.28.5",
+    "@babel/parser": "^8.0.0",
+    "@babel/types": "^8.0.0",
     "unplugin": "^3.0.0"
   },
   "devDependencies": {
@@ -67,7 +67,7 @@
     "memfs": "^4.57.2",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.59.0",
-    "oxlint-tsgolint": "^0.25.0",
+    "oxlint-tsgolint": "^7.0.0",
     "tsdown": "^0.22.0",
     "typescript": "^7.0.0",
     "unrun": "^0.3.0",
