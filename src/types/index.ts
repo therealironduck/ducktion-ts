@@ -17,7 +17,6 @@ export type {
   Implementation,
   LazyMode,
   SingletonMode,
-  Instantiable,
   DucktionDependencies,
   DucktionResolveParameters,
   DucktionResolveMethods,
