@@ -1,9 +1,22 @@
 import { expect, test } from "vitest";
 
 import { SCALAR_TOKEN } from "../../src/constants";
+import { transform } from "../../src/plugin/transform";
 import { transformConstructorDependencies } from "../../src/plugin/transformConstructorDependencies";
 
 const FILE_ID = "/project/src/service.ts";
+
+test("promotes a type-only class import so its constructor is available at runtime", () => {
+  const code = `
+import type SimpleService from "../stubs/SimpleService";
+class FooService {
+  constructor(private service: SimpleService) {}
+}`.trim();
+
+  const result = transform(code, `${process.cwd()}/tests/unit/service.ts`);
+  expect(result).toContain('import SimpleService from "../stubs/SimpleService";');
+  expect(result).toContain("concrete: SimpleService");
+});
 
 test("injects __ducktionDependencies for a class with a single typed constructor param", () => {
   const code = `

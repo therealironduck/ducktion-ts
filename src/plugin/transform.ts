@@ -5,6 +5,7 @@ import { transformConstructorDependencies } from "./transformConstructorDependen
 import { transformDecoratorMethods } from "./transformDecoratorMethods";
 import { transformDecoratorProperties } from "./transformDecoratorProperties";
 import { transformGenericCalls } from "./transformGenericCalls";
+import { transformTypeOnlyClassImports } from "./transformTypeOnlyClassImports";
 
 /**
  * Applies all plugin transforms to a TypeScript source file:
@@ -25,7 +26,7 @@ import { transformGenericCalls } from "./transformGenericCalls";
  * stays valid even after a re-parse).
  */
 export const transform = (code: string, id: string): string => {
-  let current = code;
+  let current = transformTypeOnlyClassImports(code, id);
   let sf: SourceFile = parseSourceFile(current, id);
   const ctx: SourceContext = collectSourceContext(sf);
 

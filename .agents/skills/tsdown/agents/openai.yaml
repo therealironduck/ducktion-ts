@@ -1,0 +1,4 @@
+interface:
+  display_name: "tsdown"
+  short_description: "Build and configure libraries with tsdown"
+  default_prompt: "Use $tsdown to configure this TypeScript library build."

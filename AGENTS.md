@@ -1,35 +1,34 @@
-# AGENTS.md
+# Repository Guidelines
 
-This file provides guidance to pi and other coding agents when working with code in this repository.
+## Project Structure & Module Organization
 
-## Project Overview
+This is an ESM-only TypeScript dependency-injection library. Core container code lives in `src/core/`; public types are in `src/types/`; and build-tool transformations are in `src/plugin/`. The public entry points are `src/index.ts`, `src/vite.ts`, and `src/rolldown.ts`; their exports define the package API.
 
-`@therealironduck/ducktion-ts` is a TypeScript dependency injection container library (early development). It is a TypeScript port of [Ducktion](https://github.com/therealironduck/Ducktion) (a C# Unity DI library). The planned feature set includes singleton/transient services, lazy resolution, auto dependency resolution, callbacks, attribute-based injection (`[Resolve]`), and service tagging.
+Tests live in `tests/` and are grouped by concern: `container/`, `decorators/`, `plugin/`, `unit/`, and `integration/`. Reusable fixtures belong in `tests/stubs/`. User documentation is maintained under `docs/` with VitePress.
 
-## Commands
+## Build, Test, and Development Commands
 
-```bash
-bun install          # Install dependencies
-bun run build        # Bundle with tsdown → dist/
-bun run dev          # Watch mode build
-bun run test         # Run all tests with vitest
-bun run test -- --reporter=verbose  # Run tests with verbose output
-bun run typecheck    # Type-check without emitting
-bun run lint         # Lint with oxlint
-bun run lint:fix     # Auto-fix lint issues
-bun run fmt          # Format with oxfmt
-bun run fmt:check    # Check formatting
-```
+- `bun install` installs the locked dependencies.
+- `bun run build` bundles all entry points with tsdown and emits declarations to `dist/` with TypeScript.
+- `bun run dev` rebuilds bundles in watch mode.
+- `bun run typecheck` checks `src/` without emitting files.
+- `bun run test:once` runs Vitest once; `bun run test` starts its interactive mode.
+- `bun run test:once tests/container/lazy.test.ts` runs one file.
+- `bun run lint` and `bun run fmt:check` reproduce the lint and formatting CI checks.
+- `bun run docs:dev` serves the documentation locally.
 
-To run a single test file: `bun run test tests/index.test.ts`
-To run a single test by name: `bun run test -- -t "test name"`
+## Coding Style & Naming Conventions
 
-## Architecture
+Use strict TypeScript and ESM imports. Prefer `import type` for type-only dependencies and avoid unused locals. Oxfmt enforces formatting, import ordering, and a 120-character print width; run `bun run fmt` after edits. Oxlint performs type-aware correctness checks. Follow existing naming: PascalCase for classes and exported types, camelCase for functions and variables, and descriptive kebab-case test filenames such as `auto-resolve.test.ts`.
 
-- `src/index.ts` — public entry point; everything exported here becomes part of the public API
-- `tests/` — vitest tests, mirroring `src/` structure
-- `tsdown.config.ts` — bundle config; outputs ESM to `dist/`, generates `.d.ts` via `tsgo: true`
+## Testing Guidelines
 
-TypeScript is strict (`strict: true`, `noUnusedLocals: true`, `verbatimModuleSyntax: true`). Use `import type` for type-only imports. The `tsconfig.json` only includes `src/` — test files are type-checked by vitest separately.
+Vitest is the test framework. Add or update tests for every behavior change; `CONTRIBUTING.md` treats tests as required. Place focused tests beside the matching concern and use `tests/integration/e2e/` when verifying transformed code through a build tool. No numeric coverage threshold is configured. Before submitting, run `bun run lint`, `bun run fmt:check`, `bun run build`, and `bun run test:once`.
 
-The published package exposes only `dist/index.mjs` (ESM). No CJS output.
+## Commit & Pull Request Guidelines
+
+Use Conventional Commit subjects consistent with history, for example `fix(container): allow type-only imports` or `chore(deps): update dependencies`. Keep each pull request focused on one feature or fix. Explain the motivation and behavior change, link relevant issues, add tests, and update `README.md` or `docs/` when public behavior changes. CI validates commits, linting, formatting, builds, and tests.
+
+## Security & Compatibility
+
+Do not report vulnerabilities publicly; follow the email disclosure guidance in `README.md`. Treat changes to exported entry points or runtime transformation behavior as compatibility-sensitive and avoid unplanned breaking API changes.
