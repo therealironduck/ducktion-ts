@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { build, type Rollup } from "vite";
+import { build } from "vite";
 
 import { PACKAGE_NAME } from "../../../src/constants";
 import plugin from "../../../src/vite";
@@ -28,14 +28,10 @@ export async function buildAndRun(entry: string): Promise<Record<string, unknown
         entry,
         formats: ["es"],
       },
-      rollupOptions: {
-        treeshake: false,
-        external: ["unplugin", "typescript"],
-      },
     },
   });
 
-  const buildResult = result as Rollup.RollupOutput | Rollup.RollupOutput[];
+  const buildResult = result as { output: { code: string }[] } | { output: { code: string }[] }[];
   const outputs = Array.isArray(buildResult) ? buildResult[0].output : buildResult.output;
   const code = outputs[0].code;
 
