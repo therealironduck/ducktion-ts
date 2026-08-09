@@ -1,0 +1,4 @@
+interface:
+  display_name: "Check Docs Grammar"
+  short_description: "Correct grammar and spelling in documentation"
+  default_prompt: "Use $check-docs-grammar to proofread the changed documentation files."
