@@ -14,7 +14,7 @@ DiContainer.singleton.configure({
 });
 ```
 
-All options get merged with the default configuration, so you can omit parameters you don't want to change.
+Omitted options use their default values. Pass every non-default option on each call to `configure`.
 
 ## Default values
 
