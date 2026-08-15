@@ -55,7 +55,7 @@
     "@catppuccin/vitepress": "^0.1.2",
     "@types/node": "^26.0.0",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
-    "oxfmt": "^0.62.0",
+    "oxfmt": "^0.63.0",
     "oxlint": "^1.59.0",
     "oxlint-tsgolint": "^7.0.0",
     "tsdown": "^0.22.0",
